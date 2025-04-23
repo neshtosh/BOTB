@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-surface-100 text-white antialiased overscroll-none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer base {
+  h1 {
+    @apply text-3xl sm:text-4xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight;
+  }
+  h3 {
+    @apply text-xl sm:text-2xl font-semibold;
+  }
+  h4 {
+    @apply text-lg sm:text-xl font-semibold;
+  }
+  h5 {
+    @apply text-base sm:text-lg font-semibold;
+  }
+  h6 {
+    @apply text-sm sm:text-base font-semibold;
+  }
+}
+
+@layer components {
+  .container {
+    @apply px-4 sm:px-6 mx-auto max-w-7xl;
+  }
+
+  .section {
+    @apply py-8 sm:py-12;
+  }
+
+  .glass {
+    @apply bg-surface-200/70 backdrop-blur-sm border border-surface-300/50;
+  }
+
+  .glass-hover {
+    @apply hover:bg-surface-300/70 transition-colors duration-200;
+  }
+}
+
+/* Apple-style scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface-200;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-surface-500;
+}
+
+/* Hide scrollbar for mobile devices but maintain functionality */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
+
+/* Custom style for music player progress */
+.progress-bar {
+  @apply h-1 bg-surface-300 rounded-full overflow-hidden relative cursor-pointer;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-primary-500 rounded-full absolute left-0 top-0 transition-all duration-100;
+}
+
+.progress-bar:hover .progress-bar-fill {
+  @apply bg-primary-400;
+}
+
+.progress-bar:hover::after {
+  content: '';
+  @apply w-3 h-3 bg-white rounded-full absolute top-1/2 -translate-y-1/2 transition-all duration-200;
+  left: var(--progress-percent, 0%);
+  transform: translateX(-50%) translateY(-50%);
+}
+
+/* Animation for album hover */
+.album-card {
+  @apply transition-all duration-300 ease-out;
+}
+
+.album-card:hover {
+  @apply -translate-y-2 shadow-xl shadow-surface-950/20;
+}
+
+/* Equalizer animation for now playing */
+.equalizer {
+  @apply flex items-end h-3 gap-[2px] opacity-80;
+}
+
+.equalizer-bar {
+  @apply w-[2px] bg-primary-500 rounded-full;
+  animation: equalize 0.8s infinite alternate ease-in-out;
+}
+
+.equalizer-bar:nth-child(1) {
+  animation-delay: 0s;
+  height: 30%;
+}
+
+.equalizer-bar:nth-child(2) {
+  animation-delay: 0.2s;
+  height: 80%;
+}
+
+.equalizer-bar:nth-child(3) {
+  animation-delay: 0.4s;
+  height: 60%;
+}
+
+.equalizer-bar:nth-child(4) {
+  animation-delay: 0.6s;
+  height: 40%;
+}
+
+@keyframes equalize {
+  0% {
+    height: 30%;
+  }
+  100% {
+    height: 100%;
+  }
+}
+
+/* Apple Music style background blur for player */
+.player-backdrop {
+  @apply fixed bottom-0 left-0 right-0 bg-surface-100/85 backdrop-blur-md border-t border-surface-300/30;
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  @apply relative overflow-hidden;
+}
+
+.shimmer::after {
+  content: '';
+  @apply absolute top-0 left-0 w-full h-full;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
