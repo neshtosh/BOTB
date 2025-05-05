@@ -117,35 +117,40 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ className }) => {
           <div className="flex items-center gap-4">
             <button
               onClick={playPrevious}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-white/10 hover:text-primary-400 transition-colors"
+              aria-label="Previous track"
             >
               <SkipBack size={20} />
             </button>
 
-            <button
+            <button 
               onClick={togglePlay}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-white/10 hover:text-primary-400 transition-colors"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? <Pause size={20} /> : <Play size={20} />}
             </button>
 
             <button
               onClick={playNext}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-white/10 hover:text-primary-400 transition-colors"
+              aria-label="Next track"
             >
               <SkipForward size={20} />
             </button>
 
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-white/10 hover:text-primary-400 transition-colors"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
 
             <button
               onClick={() => setShowPlaylist(!showPlaylist)}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full text-white hover:bg-white/10 hover:text-primary-400 transition-colors"
+              aria-label={showPlaylist ? 'Hide playlist' : 'Show playlist'}
             >
               <ListMusic size={20} />
             </button>

@@ -1,86 +1,49 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Disc3 } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Album } from '../../types';
-import { cn } from '../../utils/cn';
+import { useMusicPlayer } from '../../context/MusicPlayerContext';
 
 interface AlbumCardProps {
   album: Album;
-  variant?: 'default' | 'horizontal' | 'compact';
-  className?: string;
 }
 
-const AlbumCard: React.FC<AlbumCardProps> = ({ 
-  album, 
-  variant = 'default',
-  className 
-}) => {
-  const baseClasses = 'album-card relative group overflow-hidden';
-  
-  const variantClasses = {
-    default: 'rounded-xl',
-    horizontal: 'rounded-xl flex items-center',
-    compact: 'rounded-lg'
+const AlbumCard: React.FC<AlbumCardProps> = ({ album }) => {
+  const { playTrack } = useMusicPlayer();
+
+  const handlePlay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (album.tracks.length > 0) {
+      playTrack(album.tracks[0], album);
+    }
   };
 
   return (
-    <div className={cn(baseClasses, variantClasses[variant], className)}>
-      {/* Album Cover */}
-      <div 
-        className={cn(
-          'bg-cover bg-center relative overflow-hidden',
-          variant === 'default' && 'aspect-square rounded-xl',
-          variant === 'horizontal' && 'w-20 h-20 shrink-0 rounded-xl',
-          variant === 'compact' && 'aspect-square rounded-lg'
-        )}
-        style={{ backgroundImage: `url(${album.coverArt})` }}
-      >
-        {/* Play button overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <button 
-            className="bg-white text-surface-100 rounded-full p-2 transform scale-90 group-hover:scale-100 transition-transform duration-300 hover:bg-opacity-90"
-            aria-label={`Play ${album.title}`}
-          >
-            <Play size={variant === 'compact' ? 16 : 24} className="ml-0.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Album Info */}
-      <div className={cn(
-        'mt-3',
-        variant === 'horizontal' && 'ml-4 mt-0',
-        variant === 'compact' && 'mt-2'
-      )}>
-        <Link 
-          to={`/music/${album.id}`}
-          className={cn(
-            'font-medium block text-white hover:text-primary-400 transition-colors',
-            variant === 'default' && 'text-base',
-            variant === 'horizontal' && 'text-base',
-            variant === 'compact' && 'text-sm'
-          )}
+    <Link
+      to={`/music/${album.id}`}
+      className="group block bg-surface-50 rounded-xl overflow-hidden hover:bg-surface-100 transition-colors"
+    >
+      <div className="relative aspect-square">
+        <img
+          src={album.coverArt}
+          alt={album.title}
+          className="w-full h-full object-cover"
+        />
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Play album"
         >
-          {album.title}
-        </Link>
-        <div 
-          className={cn(
-            'flex items-center mt-1 text-surface-600',
-            variant === 'default' && 'text-sm',
-            variant === 'horizontal' && 'text-sm',
-            variant === 'compact' && 'text-xs'
-          )}
-        >
-          <Disc3
-            size={variant === 'compact' ? 12 : 14}
-            className="mr-1 inline-block text-surface-500"
-          />
-          <span className="capitalize">
-            {album.type} • {album.releaseYear}
-          </span>
-        </div>
+          <Play size={48} className="text-white" />
+        </button>
       </div>
-    </div>
+      <div className="p-4">
+        <h3 className="font-medium mb-1">{album.title}</h3>
+        <p className="text-sm text-surface-600">
+          {album.type.charAt(0).toUpperCase() + album.type.slice(1)} • {album.releaseYear}
+        </p>
+      </div>
+    </Link>
   );
 };
 

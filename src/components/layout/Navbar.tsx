@@ -59,10 +59,10 @@ const Navbar: React.FC = () => {
                 key={link.path}
                 to={link.path}
                 className={cn(
-                  'text-sm font-medium transition-colors duration-200',
+                  'text-sm font-medium transition-colors duration-200 hover:text-primary-400',
                   isActive(link.path) 
                     ? 'text-primary-400' 
-                    : 'text-surface-700 hover:text-white'
+                    : 'text-surface-700'
                 )}
               >
                 {link.label}

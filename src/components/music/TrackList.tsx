@@ -1,24 +1,29 @@
 import React from 'react';
-import { Play, Clock } from 'lucide-react';
-import { Album, Track } from '../../types';
+import { Play, Pause } from 'lucide-react';
+import { Track, Album } from '../../types';
+import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import ExplicitBadge from '../common/ExplicitBadge';
 import { cn } from '../../utils/cn';
 
 interface TrackListProps {
   tracks: Track[];
-  album?: Album;
-  onPlay?: (track: Track) => void;
+  album: Album;
   currentTrackId?: string;
-  isPlaying?: boolean;
+  isPlaying: boolean;
 }
 
-const TrackList: React.FC<TrackListProps> = ({ 
-  tracks, 
+const TrackList: React.FC<TrackListProps> = ({
+  tracks,
   album,
-  onPlay,
   currentTrackId,
-  isPlaying = false
+  isPlaying,
 }) => {
+  const { playTrack } = useMusicPlayer();
+
+  const handlePlay = (track: Track) => {
+    playTrack(track, album);
+  };
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -26,7 +31,10 @@ const TrackList: React.FC<TrackListProps> = ({
         <div className="col-span-1 text-center">#</div>
         <div className="col-span-8">TITLE</div>
         <div className="col-span-3 flex items-center justify-end pr-4">
-          <Clock size={14} />
+          {/* Duration */}
+          <div className="text-sm text-surface-600 pr-4">
+            Duration
+          </div>
         </div>
       </div>
 
@@ -65,10 +73,14 @@ const TrackList: React.FC<TrackListProps> = ({
                       'hidden group-hover:block text-white',
                       isCurrentTrack ? 'text-primary-400' : ''
                     )}
-                    onClick={() => onPlay && onPlay(track)}
-                    aria-label={`Play ${track.title}`}
+                    onClick={() => handlePlay(track)}
+                    aria-label={currentTrackId === track.id && isPlaying ? 'Pause' : 'Play'}
                   >
-                    <Play size={16} className="ml-0.5" />
+                    {currentTrackId === track.id && isPlaying ? (
+                      <Pause size={20} />
+                    ) : (
+                      <Play size={20} />
+                    )}
                   </button>
                 )}
               </div>
