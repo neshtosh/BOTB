@@ -44,7 +44,8 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
     };
   }, [source]);
 
-  const duration = analysis?.duration ?? mediaRef.current?.duration ?? 0;
+  // A media element reports NaN until its metadata loads.
+  const duration = analysis?.duration ?? (Number.isFinite(mediaRef.current?.duration) ? mediaRef.current!.duration : 0);
   const hooks = useMemo(() => (analysis ? findHooks(analysis, value.duration, 3) : []), [analysis, value.duration]);
 
   // Jump to the best hook the first time analysis finishes.
