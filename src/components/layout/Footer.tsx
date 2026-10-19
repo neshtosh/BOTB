@@ -1,129 +1,94 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import SocialLinks from '../common/SocialLinks';
 import Button from '../common/Button';
+import Logo from '../common/Logo';
 import { socialLinks } from '../../data/socialData';
+import { siteConfig } from '../../config/site';
+import { useNewsletter } from '../../hooks/useNewsletter';
+import { useAuth } from '../../context/AuthContext';
+import { ScrollWordmark } from '../doodles/Doodles';
+
+const linkClass = 'text-sm text-white/60 hover:text-signal transition-colors';
+const headingClass = 'font-mono text-[11px] uppercase tracking-[0.1em] text-signal mb-4';
 
 const Footer: React.FC = () => {
-  const [email, setEmail] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Here you would typically handle the newsletter subscription
-    console.log('Subscribing email:', email);
-    setEmail('');
-    // Add your newsletter subscription logic here
-  };
+  const { user, profile } = useAuth();
+  const { email, setEmail, status, message, subscribe } = useNewsletter();
 
   return (
-    <footer className="bg-surface-50 border-t border-surface-300/30">
-      <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Brand Column */}
-          <div className="space-y-6">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img 
-                src="/images/ent.png" 
-                alt="Logo" 
-                className="h-8 w-auto filter brightness-0 invert"
-              />
-              <span className="text-xl font-bold tracking-tighter">ARTISTNAME</span>
+    <footer className="bg-ink border-t-4 border-signal overflow-x-clip">
+      <div className="container py-14">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+          <div className="col-span-2 md:col-span-1 space-y-5">
+            <Link to="/" aria-label={`${siteConfig.name} home`}>
+              <Logo />
             </Link>
-            <p className="text-sm text-surface-600 max-w-xs">
-              Creating music that blends electronic beats with soulful melodies, pushing the boundaries of modern sound.
-            </p>
+            <p className="text-sm text-white/60 max-w-xs">{siteConfig.description}</p>
             <SocialLinks links={socialLinks} variant="outlined" />
           </div>
 
-          {/* Links Column */}
-          <div className="md:ml-auto">
-            <h4 className="font-medium text-lg mb-4">Quick Links</h4>
+          <div>
+            <h4 className={headingClass}>01. Product</h4>
             <ul className="space-y-3">
-              <li>
-                <Link to="/music" className="text-sm text-surface-600 hover:text-primary-400 transition-colors">
-                  Music
-                </Link>
-              </li>
-              <li>
-                <Link to="/videos" className="text-sm text-surface-600 hover:text-primary-400 transition-colors">
-                  Videos
-                </Link>
-              </li>
-              <li>
-                <Link to="/events" className="text-sm text-surface-600 hover:text-primary-400 transition-colors">
-                  Events
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="text-sm text-surface-600 hover:text-primary-400 transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <a 
-                  href="/press-kit.pdf" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sm text-surface-600 hover:text-primary-400 transition-colors"
-                >
-                  Press Kit
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="mailto:contact@artistname.com" 
-                  className="text-sm text-surface-600 hover:text-primary-400 transition-colors"
-                >
-                  Contact
-                </a>
-              </li>
+              <li><Link to="/#how" className={linkClass}>How it works</Link></li>
+              <li><Link to="/#platforms" className={linkClass}>Platforms</Link></li>
+              <li><Link to="/#faq" className={linkClass}>FAQ</Link></li>
             </ul>
           </div>
 
-          {/* Newsletter Column */}
           <div>
-            <h4 className="font-medium text-lg mb-4">Stay Updated</h4>
-            <p className="text-sm text-surface-600 mb-4">
-              Subscribe to get the latest updates on releases, events, and exclusive content.
-            </p>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="relative">
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Your email address" 
-                  required
-                  className="w-full bg-surface-200 border border-surface-400 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <Button 
-                type="submit" 
-                fullWidth 
-                leftIcon={<Mail size={16} />}
-              >
+            <h4 className={headingClass}>02. Account</h4>
+            <ul className="space-y-3">
+              {user ? (
+                <>
+                  <li><Link to="/dashboard" className={linkClass}>Studio</Link></li>
+                  {profile && <li><Link to={`/c/${profile.handle}`} className={linkClass}>My page</Link></li>}
+                  <li><Link to="/dashboard/connections" className={linkClass}>Connections</Link></li>
+                </>
+              ) : (
+                <>
+                  <li><Link to="/signup" className={linkClass}>Start free</Link></li>
+                  <li><Link to="/login" className={linkClass}>Log in</Link></li>
+                </>
+              )}
+              <li><a href={`mailto:${siteConfig.contactEmail}`} className={linkClass}>Contact</a></li>
+            </ul>
+          </div>
+
+          <div className="col-span-2 md:col-span-1">
+            <h4 className={headingClass}>03. Product updates</h4>
+            <p className="text-sm text-white/60 mb-4">New platforms and features, roughly once a month.</p>
+            <form onSubmit={subscribe} className="space-y-3">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email address"
+                required
+                aria-label="Email address"
+                className="w-full bg-transparent border border-signal/60 px-4 py-2.5 text-sm placeholder:text-white/40 focus:outline-none focus:border-signal focus:ring-1 focus:ring-signal"
+              />
+              <Button type="submit" fullWidth className="rounded-none" isLoading={status === 'loading'} leftIcon={<Mail size={16} />}>
                 Subscribe
               </Button>
+              {message && <p className={status === 'error' ? 'text-xs text-error-400' : 'text-xs text-signal'}>{message}</p>}
             </form>
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-surface-300/30 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-xs text-surface-600">
-            &copy; {new Date().getFullYear()} ARTISTNAME. All rights reserved.
+        <ScrollWordmark text="Be your own label" className="mt-14 -mx-1 text-signal" />
+
+        <div className="mt-6 pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-white/50">
+            &copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
-          <div className="flex gap-4 mt-4 md:mt-0">
-            <a 
-              href="/privacy-policy" 
-              className="text-xs text-surface-600 hover:text-primary-400 transition-colors"
-            >
+          <div className="flex gap-4">
+            <a href="/privacy-policy.html" className="text-xs text-white/50 hover:text-signal transition-colors">
               Privacy Policy
             </a>
-            <a 
-              href="/terms-of-service" 
-              className="text-xs text-surface-600 hover:text-primary-400 transition-colors"
-            >
+            <a href="/terms-of-service.html" className="text-xs text-white/50 hover:text-signal transition-colors">
               Terms of Service
             </a>
           </div>

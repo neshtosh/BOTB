@@ -34,11 +34,11 @@ const Button: React.FC<ButtonProps> = ({
   
   // Variant specific classes
   const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
+    primary: 'bg-signal text-ink font-semibold hover:bg-white focus:ring-signal',
     secondary: 'bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500',
     accent: 'bg-accent-600 text-white hover:bg-accent-700 focus:ring-accent-500',
     ghost: 'bg-transparent text-white hover:bg-surface-300 focus:ring-surface-400',
-    outline: 'bg-transparent text-white border border-surface-500 hover:bg-surface-300 focus:ring-surface-400',
+    outline: 'bg-transparent text-white border border-signal/70 hover:bg-signal hover:text-ink focus:ring-signal',
   };
   
   // Classes for disabled state

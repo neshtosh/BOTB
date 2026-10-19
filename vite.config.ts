@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    // ffmpeg.wasm spawns its worker via import.meta.url, which pre-bundling breaks.
+    exclude: ['lucide-react', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
 });

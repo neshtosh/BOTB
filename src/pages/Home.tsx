@@ -1,217 +1,377 @@
-import React, { useRef } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRight, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { albums, featuredAlbum, recentReleases } from '../data/musicData';
-import { videos, featuredVideo, recentVideos } from '../data/videoData';
-import { upcomingEvents } from '../data/eventsData';
-import AlbumCard from '../components/music/AlbumCard';
-import VideoCard from '../components/videos/VideoCard';
-import EventCard from '../components/events/EventCard';
-import Button from '../components/common/Button';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowUpRight,
+  BarChart3,
+  Facebook,
+  Globe2,
+  Instagram,
+  KeyRound,
+  Mic2,
+  Minus,
+  Music2,
+  Plus,
+  Radio,
+  Scissors,
+  Type,
+  Video,
+  Youtube,
+  Cloud,
+  Mail,
+} from 'lucide-react';
+import Hero from '../components/home/Hero';
+import ScrollMarquee from '../components/doodles/ScrollMarquee';
+import { ScrollDoodle, SectionTitle } from '../components/doodles/Doodles';
+import { CautionTapes, OutlineScroll, PaperPanel } from '../components/theme/Poster';
+import { AnalyticsVisual, HookVisual, PlatformsVisual, UploadVisual } from '../components/landing/StepVisuals';
+import { ControlRoom, CreatorStrip } from '../components/landing/IndieVisuals';
+import { siteConfig } from '../config/site';
+import { useAuth } from '../context/AuthContext';
+import { scrollToId } from '../hooks/useSmoothScroll';
 import { cn } from '../utils/cn';
-import { useScrollAnimation } from '../hooks/useScrollAnimation';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const rise = (i = 0) => ({
+  initial: { opacity: 0, y: 40 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-60px' },
+  transition: { duration: 0.8, delay: i * 0.08, ease: EASE },
+});
+
+const STEPS = [
+  {
+    n: '01',
+    title: 'Upload once',
+    text: 'Drop in a track or a video and add the title, description and tags one time. No more re-typing the same details into five different apps.',
+    points: ['Video: MP4, MOV and more', 'Audio: MP3, WAV and more', 'Saved to your library'],
+    visual: <UploadVisual />,
+  },
+  {
+    n: '02',
+    title: 'Find the hook',
+    text: "Full songs don't belong on TikTok or Reels. Unsigned listens to your track, finds the part that hits hardest and cuts a vertical clip with your cover art. Move it or change the length if you want.",
+    points: ['15, 30 or 60 second clips', 'Made in your browser, nothing extra to install', 'Videos can be trimmed the same way'],
+    visual: <HookVisual />,
+  },
+  {
+    n: '03',
+    title: 'Pick where it goes',
+    text: 'Tick the platforms you want. For each one choose the full file or the clip, and write a caption that fits that crowd. Hit publish once.',
+    points: ['A separate caption for every platform', 'Post public, or private to review first', 'Everything goes out at the same time'],
+    visual: <PlatformsVisual />,
+  },
+  {
+    n: '04',
+    title: 'Watch it land',
+    text: 'Views, likes, comments and shares from every platform come back into one page, so you can see what is working without opening five apps.',
+    points: ['Per-post and per-platform numbers', 'Refresh whenever you want', 'Links straight to every live post'],
+    visual: <AnalyticsVisual />,
+  },
+];
+
+const INDIE_POINTS = [
+  { title: 'Release', text: 'Singles, EPs, videos and episodes, out on your schedule.' },
+  { title: 'Promote', text: 'A clip of the hook and a caption for every platform.' },
+  { title: 'Grow your fans', text: 'Fans join your list from your page. You keep that list.' },
+  { title: 'Read the numbers', text: 'See what is working across every platform in one place.' },
+];
+
+const PLATFORMS = [
+  { name: 'YouTube', icon: Youtube, gets: 'Videos and Shorts' },
+  { name: 'TikTok', icon: Music2, gets: 'Videos and song clips' },
+  { name: 'Instagram', icon: Instagram, gets: 'Reels' },
+  { name: 'Facebook', icon: Facebook, gets: 'Page videos' },
+  { name: 'SoundCloud', icon: Cloud, gets: 'Full tracks' },
+];
+
+const FEATURES = [
+  { icon: Scissors, title: 'Clip maker', text: 'Finds the hook in a song and turns it into a vertical video for socials.' },
+  { icon: Type, title: 'Captions per platform', text: 'One upload, a different caption for each audience.' },
+  { icon: BarChart3, title: 'Analytics in one place', text: 'Every view, like, comment and share, side by side.' },
+  { icon: Globe2, title: 'Your own page', text: 'A public creator page at unsigned/c/yourname with everything you post.' },
+  { icon: Mail, title: 'Fan mailing list', text: 'Fans sign up on your page. The list is yours, not an algorithm’s.' },
+  { icon: KeyRound, title: 'No passwords shared', text: 'You connect accounts with the platforms’ own sign-in. We never see your passwords.' },
+];
+
+const AUDIENCES = [
+  { icon: Mic2, title: 'Independent artists', text: 'Full track on SoundCloud, the hook on TikTok, Reels and Shorts — from one upload.' },
+  { icon: Video, title: 'Video creators', text: 'Post the full video to YouTube and Facebook and a trimmed cut to TikTok and Reels.' },
+  { icon: Radio, title: 'Podcasters', text: 'Share the episode and clip the best moment for socials without an editor.' },
+];
+
+const FAQS = [
+  {
+    q: 'Do I need a label or a manager?',
+    a: 'No. Unsigned is built for people who run their own releases. You upload, you choose where it goes, you see the numbers and you keep your fan list.',
+  },
+  {
+    q: 'How much does it cost?',
+    a: 'Unsigned is free while it is in early access. Paid plans will come later; you will be told well before anything changes.',
+  },
+  {
+    q: 'Which platforms can I post to?',
+    a: 'YouTube, TikTok, Instagram (Reels), Facebook Pages and SoundCloud. Instagram needs a Business or Creator account linked to a Facebook Page.',
+  },
+  {
+    q: 'Why not Spotify or Apple Music?',
+    a: 'They only accept music through distributors, not direct uploads from apps. We are working on a distributor connection so releases can go there too.',
+  },
+  {
+    q: 'Do you get my passwords?',
+    a: 'No. You connect each account through that platform’s own sign-in page, and you can disconnect at any time. The access keys are stored on our server and never sent to your browser.',
+  },
+  {
+    q: 'Will it post a full song to TikTok or Instagram?',
+    a: 'No. For songs, social platforms always get a clip. The full track only goes where full tracks belong, like SoundCloud.',
+  },
+  {
+    q: 'Are my posts public straight away?',
+    a: 'You choose. Publish publicly, or privately so you can check each post first. Some platforms keep posts private until they have approved our app.',
+  },
+  {
+    q: 'How big can my files be?',
+    a: 'Typical clips, tracks and music videos work well. Very long videos are not supported yet.',
+  },
+];
+
+const FaqItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-ink/20">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-6 py-5 text-left"
+      >
+        <span className="text-lg sm:text-xl font-semibold tracking-[-0.02em]">{q}</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-ink">
+          {open ? <Minus size={16} /> : <Plus size={16} />}
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <p className="pb-6 max-w-2xl text-ink/80">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const Home: React.FC = () => {
-  const featuredRef = useRef<HTMLDivElement>(null);
-  const releasesRef = useRef<HTMLDivElement>(null);
-  const videosRef = useRef<HTMLDivElement>(null);
-  const eventsRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { hash } = useLocation();
+  const startLink = user ? '/dashboard/publish' : '/signup';
 
-  const featuredVisible = useScrollAnimation(featuredRef, { threshold: 0.2 });
-  const releasesVisible = useScrollAnimation(releasesRef, { threshold: 0.2 });
-  const videosVisible = useScrollAnimation(videosRef, { threshold: 0.2 });
-  const eventsVisible = useScrollAnimation(eventsRef, { threshold: 0.2 });
-
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-  };
+  // Arriving from another page via /#section.
+  useEffect(() => {
+    if (hash) window.setTimeout(() => scrollToId(hash.slice(1)), 150);
+  }, [hash]);
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: `url(${featuredAlbum.coverArt})`,
-            filter: 'brightness(0.4)'
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-100 via-transparent to-transparent" />
-        </div>
+    <div className="overflow-x-clip">
+      <Hero />
 
-        <div className="container relative z-10">
-          <div className="max-w-3xl">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-            >
-              <span className="inline-block bg-primary-500/20 text-primary-300 text-sm font-medium rounded-full px-3 py-1 mb-6">
-                New Album Out Now
-              </span>
-              <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mb-4">
-                {featuredAlbum.title}
-              </h1>
-              <p className="text-xl sm:text-2xl text-surface-300 mb-8 max-w-2xl">
-                Stream the latest album featuring chart-topping singles and exclusive content
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button 
-                  variant="primary" 
-                  size="lg" 
-                  rightIcon={<ChevronRight size={18} />}
-                >
-                  Listen Now
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                >
-                  Watch Videos
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      <ScrollMarquee
+        items={['No label', 'No manager', 'No middleman', 'YouTube', 'TikTok', 'Instagram', 'Facebook', 'SoundCloud', 'Be your own label']}
+        className="bg-signal text-ink -mt-6 relative z-10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+      />
 
-      {/* Latest Releases */}
-      <section 
-        ref={releasesRef} 
-        className="section container"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h2>Latest Releases</h2>
-          <Link to="/music" className="text-sm text-surface-600 hover:text-white flex items-center gap-1 group transition-colors">
-            View All
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {recentReleases.map((album, index) => (
-            <motion.div
-              key={album.id}
-              variants={fadeInUp}
-              initial="hidden"
-              animate={releasesVisible ? "visible" : "hidden"}
-              transition={{ delay: index * 0.1 }}
-            >
-              <AlbumCard album={album} />
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured Video */}
-      <section 
-        ref={featuredRef}
-        className="section bg-surface-50 border-y border-surface-300/30"
-      >
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <h2>Featured Video</h2>
-            <Link to="/videos" className="text-sm text-surface-600 hover:text-white flex items-center gap-1 group transition-colors">
-              All Videos
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-
-          <motion.div
-            variants={fadeInUp}
-            initial="hidden"
-            animate={featuredVisible ? "visible" : "hidden"}
-          >
-            <VideoCard video={featuredVideo} variant="featured" />
-          </motion.div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-8">
-            {recentVideos.slice(1, 4).map((video, index) => (
-              <motion.div
-                key={video.id}
-                variants={fadeInUp}
-                initial="hidden"
-                animate={featuredVisible ? "visible" : "hidden"}
-                transition={{ delay: 0.2 + index * 0.1 }}
-              >
-                <VideoCard video={video} />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Upcoming Events */}
-      <section 
-        ref={eventsRef}
-        className="section container"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h2>Upcoming Events</h2>
-          <Link to="/events" className="text-sm text-surface-600 hover:text-white flex items-center gap-1 group transition-colors">
-            All Events
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        <div className="grid gap-6">
-          {upcomingEvents.length > 0 && (
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              animate={eventsVisible ? "visible" : "hidden"}
-            >
-              <EventCard event={upcomingEvents[0]} variant="featured" />
-            </motion.div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-            {upcomingEvents.slice(1).map((event, index) => (
-              <motion.div
-                key={event.id}
-                variants={fadeInUp}
-                initial="hidden"
-                animate={eventsVisible ? "visible" : "hidden"}
-                transition={{ delay: 0.2 + index * 0.1 }}
-              >
-                <EventCard event={event} />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section 
-        ref={videosRef}
-        className={cn(
-          "relative py-20 my-12 overflow-hidden",
-          "before:absolute before:inset-0 before:bg-gradient-radial before:from-primary-900/40 before:to-surface-100 before:z-0"
-        )}
-      >
-        <div className="container relative z-10">
-          <motion.div
-            className="text-center max-w-2xl mx-auto"
-            variants={fadeInUp}
-            initial="hidden"
-            animate={videosVisible ? "visible" : "hidden"}
-          >
-            <h2 className="text-2xl sm:text-3xl font-bold mb-4">Stay in the Loop</h2>
-            <p className="text-surface-400 mb-8">
-              Subscribe to get exclusive updates on new releases, tickets, merchandise, and more.
+      {/* Be your own label */}
+      <section id="indie" className="relative py-20 sm:py-28">
+        <ScrollDoodle shape="crown" className="hidden sm:block left-[44%] top-14 w-16 h-16" spin={-15} />
+        <div className="container grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <SectionTitle eyebrow="Independent by design" underline="loop" titleClassName="text-[2.6rem] leading-none sm:text-7xl" className="mb-6">
+              No label. No problem.
+            </SectionTitle>
+            <p className="text-lg text-white/75 max-w-lg">
+              Labels used to be the only way to get a release out everywhere, cut the promo and read the numbers.
+              Unsigned puts that whole desk in your hands, so you can run it yourself.
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input 
-                type="email" 
-                placeholder="Your email address" 
-                className="flex-1 bg-surface-200 border border-surface-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-              />
-              <Button>Subscribe</Button>
-            </div>
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+              {INDIE_POINTS.map(({ title, text }, i) => (
+                <motion.li key={title} {...rise(i)} className="border-l-2 border-signal pl-4">
+                  <p className="font-semibold">{title}</p>
+                  <p className="mt-1 text-sm text-white/60">{text}</p>
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+          <motion.div {...rise(1)} className="lg:rotate-1">
+            <ControlRoom />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="relative py-20 sm:py-28 scroll-mt-20">
+        <OutlineScroll text="How it works" className="absolute inset-x-0 top-4 opacity-25" />
+        <div className="container relative">
+          <SectionTitle eyebrow="How it works" underline="wave" titleClassName="text-[2.6rem] leading-none sm:text-7xl" className="mb-4">
+            Four steps. One upload.
+          </SectionTitle>
+          <p className="max-w-xl text-white/70 mb-16">
+            From the file on your laptop to live posts on every platform, in about the time it takes to post to one.
+          </p>
+
+          <div className="space-y-24 sm:space-y-32">
+            {STEPS.map((step, i) => (
+              <div key={step.n} className="relative grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                <ScrollDoodle
+                  shape={(['arrow', 'sparkle', 'bolt', 'waveform'] as const)[i]}
+                  className={cn('hidden md:block w-20 h-20 -top-10', i % 2 ? 'left-[46%]' : 'right-[46%]')}
+                  spin={20}
+                />
+                <motion.div {...rise()} className={cn(i % 2 === 1 && 'lg:order-2')}>
+                  <p className="font-sans font-black text-signal text-7xl sm:text-8xl leading-none tracking-[-0.06em]">{step.n}</p>
+                  <h3 className="mt-3 text-4xl sm:text-5xl">{step.title}</h3>
+                  <p className="mt-4 text-lg text-white/75 max-w-lg">{step.text}</p>
+                  <ul className="mt-6 space-y-2">
+                    {step.points.map((p) => (
+                      <li key={p} className="flex items-center gap-3 text-white/80">
+                        <span className="h-1.5 w-4 bg-signal" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+                <motion.div {...rise(1)} className={cn(i % 2 === 1 && 'lg:order-1')}>
+                  {step.visual}
+                </motion.div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Platforms on torn paper */}
+      <PaperPanel seed={21} tilt={1.2} innerClassName="py-16 sm:py-24">
+        <div id="platforms" className="container relative scroll-mt-28">
+          <ScrollDoodle shape="spiral" className="hidden sm:block right-[8%] -top-4 w-20 h-20" color="#0b0b0c" spin={40} />
+          <SectionTitle tone="dark" eyebrow="Platforms" underline="zigzag" titleClassName="text-[2.6rem] leading-none sm:text-7xl" className="mb-10">
+            Post everywhere
+          </SectionTitle>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {PLATFORMS.map(({ name, icon: Icon, gets }, i) => (
+              <motion.div key={name} {...rise(i)} className="bg-ink text-white p-5 hover:-rotate-2 transition-transform">
+                <Icon size={28} className="text-signal" />
+                <p className="mt-6 text-xl font-bold tracking-[-0.03em]">{name}</p>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">{gets}</p>
+              </motion.div>
+            ))}
+          </div>
+          <p className="mt-8 max-w-2xl text-ink/80">
+            <span className="font-semibold">Spotify &amp; Apple Music:</span> these only take music from distributors, so they
+            are not one-click yet. Distributor support is on the way.
+          </p>
+        </div>
+      </PaperPanel>
+
+      {/* Features */}
+      <section className="relative py-20 sm:py-28">
+        <div className="container">
+          <SectionTitle eyebrow="What you get" underline="loop" titleClassName="text-[2.6rem] leading-none sm:text-7xl" className="mb-12">
+            Built for creators
+          </SectionTitle>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/10 border border-white/10">
+            {FEATURES.map(({ icon: Icon, title, text }, i) => (
+              <motion.div key={title} {...rise(i % 3)} className="group bg-ink p-7 sm:p-8 hover:bg-[#141414] transition-colors">
+                <span className="grid h-12 w-12 place-items-center rounded-full border border-signal text-signal transition-colors group-hover:bg-signal group-hover:text-ink">
+                  <Icon size={20} />
+                </span>
+                <h3 className="mt-6 text-3xl">{title}</h3>
+                <p className="mt-2 text-white/65">{text}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Who it's for */}
+      <section className="relative pb-20 sm:pb-28">
+        <OutlineScroll text="Independents" reverse className="absolute inset-x-0 top-0 opacity-25" />
+        <div className="container relative">
+          <SectionTitle eyebrow="Who it's for" underline="double" titleClassName="text-[2.6rem] leading-none sm:text-7xl" className="mb-12">
+            Made for independents
+          </SectionTitle>
+          <div className="grid md:grid-cols-3 gap-5">
+            {AUDIENCES.map(({ icon: Icon, title, text }, i) => (
+              <motion.div
+                key={title}
+                {...rise(i)}
+                className={cn('paper p-7 sm:p-8', i === 0 && '-rotate-1', i === 1 && 'rotate-1 md:translate-y-6', i === 2 && '-rotate-1')}
+              >
+                <Icon size={30} />
+                <h3 className="mt-8 text-4xl text-ink">{title}</h3>
+                <p className="mt-3 text-ink/80">{text}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-20 sm:mt-24">
+          <div className="container flex flex-wrap items-end justify-between gap-4 mb-8">
+            <p className="font-display text-4xl sm:text-5xl">People running it themselves</p>
+            <span className="tag-yellow">Example creators · fictional</span>
+          </div>
+          <CreatorStrip />
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <PaperPanel seed={33} tilt={0.8} innerClassName="py-16 sm:py-24">
+        <div id="faq" className="container relative scroll-mt-28 grid lg:grid-cols-[1fr_1.6fr] gap-10">
+          <div>
+            <SectionTitle tone="dark" eyebrow="FAQ" underline="slash" titleClassName="text-[2.6rem] leading-none sm:text-7xl">
+              Good questions
+            </SectionTitle>
+            <p className="mt-6 text-ink/80 max-w-xs">
+              Something else? Email{' '}
+              <a href={`mailto:${siteConfig.contactEmail}`} className="font-semibold underline underline-offset-4">
+                {siteConfig.contactEmail}
+              </a>
+              .
+            </p>
+          </div>
+          <div className="border-t border-ink/20">
+            {FAQS.map((f) => (
+              <FaqItem key={f.q} {...f} />
+            ))}
+          </div>
+        </div>
+      </PaperPanel>
+
+      {/* Final call to action */}
+      <CautionTapes text="Be your own label ✦" className="h-[200px] sm:h-[280px]" />
+      <section className="relative pb-24 sm:pb-32 -mt-2 text-center">
+        <ScrollDoodle shape="heart" className="left-[10%] top-0 w-12 h-12" color="#ffffff" spin={20} />
+        <ScrollDoodle shape="crown" className="right-[10%] top-6 w-14 h-14" spin={-15} />
+        <div className="container">
+          <motion.h2 {...rise()} className="text-6xl sm:text-8xl">
+            Release it <span className="text-signal">yourself.</span>
+          </motion.h2>
+          <motion.p {...rise(1)} className="mt-5 text-lg text-white/70 max-w-lg mx-auto">
+            Create your account, connect your platforms and publish your first upload in a few minutes.
+          </motion.p>
+          <motion.div {...rise(2)} className="mt-10 flex flex-wrap justify-center gap-3">
+            <Link to={startLink} className="inline-flex items-center gap-2 bg-signal text-ink px-6 py-3.5 font-semibold hover:bg-white transition-colors">
+              {user ? 'Open your studio' : 'Start free'} <ArrowUpRight size={18} />
+            </Link>
+            {!user && (
+              <Link to="/login" className="btn-line py-3.5 px-6">
+                Log in
+              </Link>
+            )}
           </motion.div>
         </div>
       </section>

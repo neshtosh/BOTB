@@ -39,8 +39,8 @@ const SocialLinks: React.FC<SocialLinksProps> = ({
   
   const variantClasses = {
     default: 'text-surface-600 hover:text-white',
-    filled: 'bg-surface-300 hover:bg-surface-400 rounded-full p-2',
-    outlined: 'border border-surface-500 hover:border-white rounded-full p-2 hover:bg-surface-300'
+    filled: 'bg-signal text-ink hover:bg-white rounded-full p-2',
+    outlined: 'border border-signal text-signal rounded-full p-2 hover:bg-signal hover:text-ink'
   };
 
   return (

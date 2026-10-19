@@ -1,3 +1,4 @@
+// TODO: replace with the real profile URLs.
 import { SocialLink } from '../types';
 
 export const socialLinks: SocialLink[] = [

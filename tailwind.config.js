@@ -3,19 +3,29 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Inter Tight"', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+        // Brush display face for titles (licence: licenses/Dracutaz-EULA.txt).
+        display: ['Dracutaz', '"Inter Tight"', 'system-ui', 'sans-serif'],
+      },
       colors: {
+        // Signal accent used by the hero, labels and highlights.
+        signal: '#f2e600',
+        ink: '#0b0b0c',
+        // Poster yellow. Anything sitting on primary-500/600 uses ink (black) text.
         primary: {
-          50: '#f0f7ff',
-          100: '#e0efff',
-          200: '#c0dfff',
-          300: '#92c5ff',
-          400: '#5ea3ff',
-          500: '#3b7eff',
-          600: '#1f5ff6',
-          700: '#1749e3',
-          800: '#1a3cb8',
-          900: '#1c358f',
-          950: '#152057',
+          50: '#fffde5',
+          100: '#fffab8',
+          200: '#fff57a',
+          300: '#faf04a',
+          400: '#f5ea1f',
+          500: '#f2e600',
+          600: '#dccf00',
+          700: '#b3a800',
+          800: '#7a7300',
+          900: '#3d3a00',
+          950: '#1f1d00',
         },
         secondary: {
           50: '#f0fdfa',
