@@ -21,6 +21,8 @@ export interface PublishPlan {
   perTarget: Partial<Record<Target, TargetPlan>>;
   clip: ClipSettings;
   privacy: 'public' | 'private';
+  // ISO time the posts should go live; null/undefined = straight away.
+  scheduledFor?: string | null;
 }
 
 export const emptyPlan = (): PublishPlan => ({
@@ -49,6 +51,7 @@ export const needsClip = (plan: PublishPlan) => plan.targets.some((t) => plan.pe
 export type TargetProgress =
   | { status: 'rendering'; fraction: number }
   | { status: 'processing' }
+  | { status: 'scheduled'; at: string }
   | { status: 'published'; url: string | null }
   | { status: 'failed'; error: string };
 
@@ -69,10 +72,11 @@ async function publishOne(contentId: string, target: Target, plan: PublishPlan, 
       body: JSON.stringify({
         contentId,
         target,
-        options: { privacy: plan.privacy, caption: plan.perTarget[target]?.caption },
+        options: { privacy: plan.privacy, caption: plan.perTarget[target]?.caption, scheduledFor: plan.scheduledFor ?? null },
       }),
     });
-    onProgress(target, { status: 'published', url: job.external_url });
+    if (job.status === 'scheduled') onProgress(target, { status: 'scheduled', at: job.scheduled_for ?? plan.scheduledFor ?? '' });
+    else onProgress(target, { status: 'published', url: job.external_url });
   } catch (err) {
     onProgress(target, { status: 'failed', error: err instanceof Error ? err.message : 'Failed' });
   }

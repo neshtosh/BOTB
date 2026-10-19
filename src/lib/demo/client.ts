@@ -116,8 +116,34 @@ const DEFAULTS: Record<string, () => Row> = {
     parent_id: null,
     clip_start: null,
     clip_duration: null,
+    release_id: null,
+    track_number: null,
+    version: '',
+    featured_artists: [],
+    songwriters: [],
+    is_cover: false,
+    explicit: false,
+    instrumental: false,
+    ai_generated: false,
+    hook_start: null,
     created_at: now(),
   }),
+  releases: () => ({
+    secondary_genre: null,
+    language: 'English',
+    description: '',
+    tags: [],
+    previously_released: false,
+    original_release_date: null,
+    release_at: null,
+    cover_path: null,
+    is_public: true,
+    splits: [],
+    smart_link_visits: 0,
+    created_at: now(),
+    updated_at: now(),
+  }),
+  release_presaves: () => ({ created_at: now() }),
   platform_connections: () => ({ metadata: {}, created_at: now() }),
   publish_jobs: () => ({
     status: 'queued',
@@ -126,6 +152,7 @@ const DEFAULTS: Record<string, () => Row> = {
     external_url: null,
     external_meta: {},
     error: null,
+    scheduled_for: null,
     created_at: now(),
     updated_at: now(),
   }),
@@ -295,7 +322,11 @@ class Query implements PromiseLike<Result> {
         const row: Row = { ...(DEFAULTS[this.name]?.() ?? { created_at: now() }), ...input };
         if (this.name !== 'post_metrics') row.id ??= uid();
         if (!canWrite(this.name, row, userId)) return { data: null, error: { message: 'Permission denied (demo RLS)', code: '42501' } };
-        if (this.name === 'newsletter_subscribers' && rows.some((r) => r.email === row.email && (r.creator_id ?? null) === (row.creator_id ?? null))) {
+        const duplicate =
+          (this.name === 'newsletter_subscribers' && rows.some((r) => r.email === row.email && (r.creator_id ?? null) === (row.creator_id ?? null))) ||
+          (this.name === 'release_presaves' && rows.some((r) => r.email === row.email && r.release_id === row.release_id)) ||
+          (this.name === 'releases' && rows.some((r) => r.slug === row.slug));
+        if (duplicate) {
           return { data: null, error: { message: 'duplicate key value', code: '23505' } };
         }
         const keys = this.op === 'upsert' ? (this.name === 'post_metrics' ? ['job_id'] : this.name === 'platform_tokens' ? ['connection_id'] : this.onConflict) : null;
@@ -365,7 +396,54 @@ const storage = {
   },
 };
 
+// --------------------------------------------------------------------------
+// Database functions (supabase/migrations/0003_releases.sql)
+// --------------------------------------------------------------------------
+
+// Same shape as public.smart_link(): what a smart-link visitor may see.
+function smartLink(slug: string) {
+  const release = table('releases').find((r) => r.slug === slug && r.is_public === true);
+  if (!release) return null;
+  const owner = table('profiles').find((p) => p.id === release.user_id);
+  const items = table('content_items');
+  const tracks = items
+    .filter((c) => c.release_id === release.id)
+    .sort((a, b) => Number(a.track_number) - Number(b.track_number));
+  const releaseOf = (c: Row) => (c.parent_id ? items.find((p) => p.id === c.parent_id)?.release_id : c.release_id);
+  const links = table('publish_jobs')
+    .filter((j) => j.status === 'published' && j.external_url)
+    .filter((j) => ((j.options as Row)?.privacy ?? 'public') === 'public')
+    .flatMap((j) => {
+      const c = items.find((i) => i.id === j.content_id);
+      if (!c || releaseOf(c) !== release.id) return [];
+      return [{ target: j.target, url: j.external_url, track_id: c.parent_id ?? c.id, from_clip: Boolean(c.parent_id), published_at: j.updated_at }];
+    });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { splits, user_id, ...publicFields } = release;
+  return {
+    release: publicFields,
+    owner: owner ? { handle: owner.handle, display_name: owner.display_name } : null,
+    tracks: tracks.map((c) => ({ id: c.id, title: c.title, track_number: c.track_number, version: c.version, explicit: c.explicit })),
+    links,
+  };
+}
+
+async function rpc(name: string, args: Record<string, unknown>): Promise<Result> {
+  await delay(80);
+  if (name === 'smart_link') return { data: smartLink(String(args.release_slug)), error: null };
+  if (name === 'track_release_visit') {
+    const release = table('releases').find((r) => r.slug === args.release_slug && r.is_public === true);
+    if (release) {
+      release.smart_link_visits = Number(release.smart_link_visits ?? 0) + 1;
+      save();
+    }
+    return { data: null, error: null };
+  }
+  return { data: null, error: { message: `Unknown function ${name}` } };
+}
+
 export const demoClient = {
+  rpc,
   auth,
   from: (name: string) => new Query(name),
   storage,

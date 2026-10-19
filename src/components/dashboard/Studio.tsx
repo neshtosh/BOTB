@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { ScribbleUnderline, ScrollDoodle, type DoodleShape, type UnderlineVariant } from '../doodles/Doodles';
-import type { PublishJob } from '../../types/platform';
+import type { PublishJob, ReleaseHealth } from '../../types/platform';
 
 // Building blocks shared by the studio pages. Kept static on purpose: the
 // studio is a workspace, so doodles and underlines render fully drawn.
@@ -56,6 +56,7 @@ export const PanelTitle: React.FC<{
 
 const statusStyles: Record<PublishJob['status'], string> = {
   queued: 'border border-white/25 text-white/60',
+  scheduled: 'border border-dashed border-signal/70 text-signal',
   processing: 'border border-signal text-signal',
   published: 'bg-signal text-ink',
   failed: 'border border-error-400 text-error-400',
@@ -94,4 +95,28 @@ export const Notice: React.FC<{ tone?: 'ok' | 'error' | 'warn'; children: React.
   >
     {children}
   </div>
+);
+
+// Release health at a glance, like a distributor dashboard: green = live,
+// yellow = on its way (processing or scheduled), red = needs attention.
+export type { ReleaseHealth };
+
+const healthStyles: Record<ReleaseHealth, { dot: string; label: string }> = {
+  live: { dot: 'bg-success-400', label: 'Live' },
+  scheduled: { dot: 'bg-signal', label: 'Scheduled' },
+  processing: { dot: 'bg-signal animate-pulse', label: 'Processing' },
+  attention: { dot: 'bg-error-400', label: 'Needs attention' },
+  draft: { dot: 'bg-white/30', label: 'Library only' },
+};
+
+export const HealthBadge: React.FC<{ health: ReleaseHealth; className?: string; detail?: string }> = ({
+  health,
+  className,
+  detail,
+}) => (
+  <span className={cn('inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-white/70', className)}>
+    <span aria-hidden className={cn('h-2.5 w-2.5 rounded-full shrink-0', healthStyles[health].dot)} />
+    {healthStyles[health].label}
+    {detail && <span className="text-white/40 normal-case tracking-normal">· {detail}</span>}
+  </span>
 );

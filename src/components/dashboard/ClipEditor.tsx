@@ -14,12 +14,16 @@ interface ClipEditorProps {
   value: ClipSettings;
   onChange: (next: ClipSettings) => void;
   disabled?: boolean;
+  // The cover comes from somewhere else (a release's artwork).
+  hideCover?: boolean;
+  // false keeps the current start instead of jumping to the best hook once analysed.
+  autoPick?: boolean;
 }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const BARS = 120;
 
-const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onChange, disabled }) => {
+const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onChange, disabled, hideCover, autoPick = true }) => {
   const [analysis, setAnalysis] = useState<AudioAnalysis | null>(null);
   const [analysisError, setAnalysisError] = useState('');
   const [playing, setPlaying] = useState(false);
@@ -49,7 +53,7 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
   const hooks = useMemo(() => (analysis ? findHooks(analysis, value.duration, 3) : []), [analysis, value.duration]);
 
   // Jump to the best hook the first time analysis finishes.
-  const autoPicked = useRef(false);
+  const autoPicked = useRef(!autoPick);
   useEffect(() => {
     if (hooks.length && !autoPicked.current) {
       autoPicked.current = true;
@@ -154,7 +158,7 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
         </div>
       </div>
 
-      {mediaType === 'audio' && (
+      {mediaType === 'audio' && !hideCover && (
         <div className="flex items-center gap-3">
           <label className="relative w-16 h-28 overflow-hidden bg-white/[0.04] border border-dashed border-white/25 hover:border-signal transition-colors flex items-center justify-center cursor-pointer shrink-0">
             {coverUrl ? <img src={coverUrl} alt="Clip cover" className="w-full h-full object-cover" /> : <ImagePlus size={20} className="text-white/50" />}

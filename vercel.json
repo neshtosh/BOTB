@@ -9,9 +9,19 @@
     "api/publish.ts": {
       "maxDuration": 300,
       "memory": 2048
+    },
+    "api/cron/scheduled.ts": {
+      "maxDuration": 300,
+      "memory": 2048
     }
   },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/cron/scheduled",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

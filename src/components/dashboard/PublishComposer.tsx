@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, ExternalLink, Loader2, Scissors, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, ExternalLink, Loader2, Scissors, XCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { distributionOnly, modesFor, targetsFor } from '../../config/platforms';
 import { needsClip, PublishPlan, TargetProgress, toggleTarget } from '../../lib/publishPlan';
@@ -22,7 +22,7 @@ interface PublishComposerProps {
   disabled?: boolean;
 }
 
-const ProgressIcon: React.FC<{ state?: TargetProgress }> = ({ state }) => {
+export const ProgressIcon: React.FC<{ state?: TargetProgress }> = ({ state }) => {
   if (!state) return null;
   switch (state.status) {
     case 'rendering':
@@ -33,6 +33,8 @@ const ProgressIcon: React.FC<{ state?: TargetProgress }> = ({ state }) => {
       );
     case 'processing':
       return <Loader2 size={18} className="animate-spin text-signal" />;
+    case 'scheduled':
+      return <CalendarClock size={18} className="text-signal" aria-label="Scheduled" />;
     case 'failed':
       return <XCircle size={18} className="text-error-400" />;
     case 'published':

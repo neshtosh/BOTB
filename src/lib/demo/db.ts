@@ -24,11 +24,14 @@ export const TABLES = [
   'publish_jobs',
   'post_metrics',
   'newsletter_subscribers',
+  'releases',
+  'release_presaves',
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
 const KEY = 'unsigned-demo-db';
-const VERSION = 1;
+// Bump when the seed or tables change shape; older demo data is then replaced.
+const VERSION = 2;
 
 let state: DemoState | null = null;
 
@@ -83,6 +86,10 @@ export function canRead(name: string, row: Row, userId: string | null): boolean 
       return row.user_id === userId || row.is_public === true;
     case 'newsletter_subscribers':
       return row.creator_id === userId && userId !== null;
+    case 'releases':
+      return row.user_id === userId || row.is_public === true;
+    case 'release_presaves':
+      return userId !== null && table('releases').some((r) => r.id === row.release_id && r.user_id === userId);
     default:
       return row.user_id === userId && userId !== null;
   }
@@ -90,6 +97,7 @@ export function canRead(name: string, row: Row, userId: string | null): boolean 
 
 export function canWrite(name: string, row: Row, userId: string | null): boolean {
   if (name === 'newsletter_subscribers') return true; // anyone can subscribe
+  if (name === 'release_presaves') return table('releases').some((r) => r.id === row.release_id && r.is_public === true);
   if (name === 'profiles') return row.id === userId;
   return row.user_id === userId && userId !== null;
 }
@@ -103,6 +111,11 @@ export function cascadeDelete(name: string, ids: string[]) {
     s.tables[t] = (s.tables[t] ?? []).filter((r) => !pred(r));
     return removed;
   };
+  if (name === 'releases') {
+    drop('release_presaves', (r) => ids.includes(r.release_id as string));
+    const tracks = drop('content_items', (r) => ids.includes(r.release_id as string));
+    cascadeDelete('content_items', tracks.map((t) => t.id as string));
+  }
   if (name === 'content_items') {
     const children = drop('content_items', (r) => ids.includes(r.parent_id as string));
     const allIds = [...ids, ...children.map((c) => c.id as string)];

@@ -73,7 +73,7 @@ const ProfileSettings: React.FC = () => {
         }
       />
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_17rem] gap-6 items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_17rem] gap-6 items-start">
         <form onSubmit={save} className={`${cardClass} space-y-5`}>
           <PanelTitle index="01">Your details</PanelTitle>
           <div>

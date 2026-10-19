@@ -2,13 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { FlaskConical, RotateCcw, X } from 'lucide-react';
 import { isDemoMode, resetDemo } from '../../lib/supabase';
 import { ensureSeedMedia } from '../../lib/demo/seed';
+import { runDueJobs } from '../../lib/demo/api';
 
 // Small floating notice so nobody mistakes demo data for the real thing.
 const DemoBadge: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (isDemoMode) ensureSeedMedia();
+    if (!isDemoMode) return;
+    ensureSeedMedia();
+    // Scheduled releases go live while the demo is open (the real app uses a cron job).
+    runDueJobs();
+    const timer = window.setInterval(runDueJobs, 15_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   if (!isDemoMode) return null;

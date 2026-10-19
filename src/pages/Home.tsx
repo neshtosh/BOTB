@@ -106,6 +106,10 @@ const FAQS = [
     a: 'No. Unsigned is built for people who run their own releases. You upload, you choose where it goes, you see the numbers and you keep your fan list.',
   },
   {
+    q: 'How is this different from a distributor?',
+    a: 'A distributor delivers your music to stores and passes royalties on to you. Unsigned posts to your own accounts instead, so each platform pays you directly and we take 0%.',
+  },
+  {
     q: 'How much does it cost?',
     a: 'Unsigned is free while it is in early access. Paid plans will come later; you will be told well before anything changes.',
   },
@@ -118,20 +122,24 @@ const FAQS = [
     a: 'They only accept music through distributors, not direct uploads from apps. We are working on a distributor connection so releases can go there too.',
   },
   {
+    q: 'How do I get paid?',
+    a: 'Through each platform’s own creator programme, such as the YouTube Partner Programme or TikTok Creator Rewards. Unsigned never holds your money.',
+  },
+  {
     q: 'Do you get my passwords?',
     a: 'No. You connect each account through that platform’s own sign-in page, and you can disconnect at any time. The access keys are stored on our server and never sent to your browser.',
   },
   {
     q: 'Will it post a full song to TikTok or Instagram?',
-    a: 'No. For songs, social platforms always get a clip. The full track only goes where full tracks belong, like SoundCloud.',
+    a: 'No. For songs, social platforms get a 15, 30 or 60 second clip of the hook, which you can move. The full track goes where full tracks belong, like SoundCloud.',
+  },
+  {
+    q: 'Can I schedule a release?',
+    a: 'Yes. Post as soon as possible, or pick a date and time and it goes out within a few minutes of it. Every release also gets a smart link that collects pre-saves before release day.',
   },
   {
     q: 'Are my posts public straight away?',
-    a: 'You choose. Publish publicly, or privately so you can check each post first. Some platforms keep posts private until they have approved our app.',
-  },
-  {
-    q: 'How big can my files be?',
-    a: 'Typical clips, tracks and music videos work well. Very long videos are not supported yet.',
+    a: 'You choose: public, or private so you can check each post first. TikTok is the exception for now: posts stay private (only you can see them) until TikTok has approved our app.',
   },
 ];
 
@@ -347,6 +355,12 @@ const Home: React.FC = () => {
             {FAQS.map((f) => (
               <FaqItem key={f.q} {...f} />
             ))}
+            <Link
+              to="/help"
+              className="mt-6 inline-flex items-center gap-1.5 font-semibold underline underline-offset-4 hover:no-underline"
+            >
+              Visit the help centre →
+            </Link>
           </div>
         </div>
       </PaperPanel>

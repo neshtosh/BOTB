@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ArrowUpRight, BarChart3, LayoutDashboard, Library, Link2, LogOut, UploadCloud, UserCircle } from 'lucide-react';
+import { ArrowUpRight, BarChart3, HelpCircle, LayoutDashboard, Library, Link2, LogOut, UploadCloud, UserCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import Logo, { LogoMark } from '../../components/common/Logo';
@@ -8,8 +8,8 @@ import { isDemoMode } from '../../lib/supabase';
 
 const nav = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/dashboard/publish', label: 'Upload & Publish', icon: UploadCloud },
-  { to: '/dashboard/library', label: 'Library', icon: Library },
+  { to: '/dashboard/publish', label: 'New release', icon: UploadCloud },
+  { to: '/dashboard/library', label: 'My music', icon: Library },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/connections', label: 'Connections', icon: Link2 },
   { to: '/dashboard/profile', label: 'Profile', icon: UserCircle },
@@ -96,6 +96,12 @@ const DashboardLayout: React.FC = () => {
               <ArrowUpRight size={17} /> My page
             </Link>
           )}
+          <Link
+            to="/help"
+            className="md:hidden flex items-center gap-2 px-3 py-2.5 text-sm whitespace-nowrap text-white/65 border border-transparent hover:text-white"
+          >
+            <HelpCircle size={17} /> Help
+          </Link>
           <button
             onClick={signOut}
             className="md:hidden flex items-center gap-2 px-3 py-2.5 text-sm whitespace-nowrap text-white/65 border border-transparent hover:text-white"
@@ -118,6 +124,12 @@ const DashboardLayout: React.FC = () => {
               <ArrowUpRight size={20} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </Link>
           )}
+          <Link
+            to="/help"
+            className="w-full flex items-center gap-2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 hover:text-signal transition-colors"
+          >
+            <HelpCircle size={14} /> Help centre
+          </Link>
           <button
             onClick={signOut}
             className="w-full flex items-center gap-2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 hover:text-signal transition-colors"

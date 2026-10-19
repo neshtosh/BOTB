@@ -35,6 +35,7 @@ const Footer: React.FC = () => {
               <li><Link to="/#how" className={linkClass}>How it works</Link></li>
               <li><Link to="/#platforms" className={linkClass}>Platforms</Link></li>
               <li><Link to="/#faq" className={linkClass}>FAQ</Link></li>
+              <li><Link to="/help" className={linkClass}>Help</Link></li>
             </ul>
           </div>
 

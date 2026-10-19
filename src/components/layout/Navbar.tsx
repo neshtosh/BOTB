@@ -56,6 +56,7 @@ const Navbar: React.FC = () => {
   // Big menu entries: page sections, then account destinations.
   const menuItems: { label: string; onClick?: () => void; to?: string }[] = [
     ...sectionLinks.map((s) => ({ label: s.label, onClick: () => goToSection(s.id) })),
+    { label: 'Help', to: '/help' },
     ...(user
       ? [
           { label: 'Studio', to: '/dashboard' },
@@ -93,6 +94,9 @@ const Navbar: React.FC = () => {
                     {s.label}
                   </button>
                 ))}
+                <Link to="/help" className="text-sm font-medium text-white/80 hover:text-signal transition-colors">
+                  Help
+                </Link>
               </div>
               <span className="hidden xl:inline font-mono text-[11px] uppercase tracking-[0.08em] text-white/50 tabular-nums">
                 {siteConfig.cityCode} {time}

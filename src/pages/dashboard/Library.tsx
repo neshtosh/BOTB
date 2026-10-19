@@ -1,192 +1,130 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, FileAudio, FileVideo, Send, Trash2, UploadCloud } from 'lucide-react';
+import { Check, Copy, Disc3, Eye, Link2, Plus } from 'lucide-react';
 import Button from '../../components/common/Button';
-import PublishComposer from '../../components/dashboard/PublishComposer';
-import { cardClass, iconButtonClass, labelClass, selectClass } from '../../components/dashboard/styles';
-import { PageHeader } from '../../components/dashboard/Studio';
-import { targetName } from '../../config/platforms';
+import { iconButtonClass, segmentClass, segmentGroupClass } from '../../components/dashboard/styles';
+import { HealthBadge, PageHeader } from '../../components/dashboard/Studio';
+import { useReleases, type ReleaseWithTracks } from '../../hooks/useCreatorData';
+import { formatReleaseDate, isUpcoming, KIND_LABEL, smartLinkUrl } from '../../lib/releases';
 import { cn } from '../../utils/cn';
-import { useAuth } from '../../context/AuthContext';
-import { LibraryItem, useConnections, useLibrary } from '../../hooks/useCreatorData';
-import {
-  defaultCaption,
-  downloadSource,
-  emptyPlan,
-  executePlan,
-  needsClip,
-  PublishPlan,
-  TargetProgress,
-} from '../../lib/publishPlan';
-import { MEDIA_BUCKET, supabase } from '../../lib/supabase';
-import { formatBytes, formatDate } from '../../utils/formatters';
-import type { PlatformConnection, Target } from '../../types/platform';
+import type { ReleaseHealth } from '../../types/platform';
 
-const PublishPanel: React.FC<{
-  item: LibraryItem;
-  connections: PlatformConnection[];
-  onDone: () => void;
-}> = ({ item, connections, onDone }) => {
-  const { profile } = useAuth();
-  const [plan, setPlan] = useState<PublishPlan>(emptyPlan);
-  const [progress, setProgress] = useState<Partial<Record<Target, TargetProgress>>>({});
-  const [busy, setBusy] = useState(false);
-  const [source, setSource] = useState<File | null>(null);
-  const [sourceError, setSourceError] = useState('');
-  const published = item.jobs.filter((j) => j.status === 'published').map((j) => j.target);
-  const wantsClip = needsClip(plan);
+type Filter = 'all' | ReleaseHealth;
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'live', label: 'Live' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'processing', label: 'Processing' },
+  { id: 'attention', label: 'Needs attention' },
+  { id: 'draft', label: 'Library only' },
+];
 
-  // Only download the original when the creator actually asks for a clip.
-  useEffect(() => {
-    if (!wantsClip || source || sourceError) return;
-    downloadSource(item)
-      .then(setSource)
-      .catch((err) => setSourceError(err instanceof Error ? err.message : 'Could not load the file.'));
-  }, [wantsClip, source, sourceError, item]);
+export const CoverThumb: React.FC<{ release: Pick<ReleaseWithTracks, 'coverUrl' | 'title'>; className?: string }> = ({ release, className }) => (
+  <div className={cn('relative shrink-0 bg-signal text-ink grid place-items-center overflow-hidden', className)}>
+    {release.coverUrl ? <img src={release.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : <Disc3 size={22} />}
+  </div>
+);
 
-  const publish = async () => {
-    setBusy(true);
-    setProgress({});
-    await executePlan({
-      plan,
-      item,
-      mediaType: item.media_type,
-      getSource: async () => source ?? downloadSource(item),
-      creatorName: profile?.display_name ?? '',
-      onProgress: (target, p) => setProgress((prev) => ({ ...prev, [target]: p })),
-    });
-    setBusy(false);
-    setPlan((p) => ({ ...p, targets: [] }));
-    onDone();
-  };
-
+const CopyLink: React.FC<{ slug: string }> = ({ slug }) => {
+  const [copied, setCopied] = useState(false);
   return (
-    <div className="mt-5 pt-5 border-t border-dashed border-white/15 space-y-5">
-      <p className="eyebrow text-signal">Publish “{item.title}” to more platforms</p>
-      <PublishComposer
-        mediaType={item.media_type}
-        connections={connections}
-        plan={plan}
-        onChange={setPlan}
-        defaultCaption={defaultCaption(item.description, item.tags)}
-        source={source}
-        sourceError={sourceError}
-        progress={progress}
-        alreadyPublished={published}
-        disabled={busy}
-      />
-      <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-        <div className="flex-1">
-          <label className={labelClass} htmlFor={`privacy-${item.id}`}>Visibility</label>
-          <select id={`privacy-${item.id}`} className={selectClass} value={plan.privacy} disabled={busy}
-            onChange={(e) => setPlan({ ...plan, privacy: e.target.value as 'public' | 'private' })}>
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
-        <Button onClick={publish} isLoading={busy} disabled={plan.targets.length === 0 || (wantsClip && !source)}
-          leftIcon={<Send size={16} />}>
-          Publish
-        </Button>
-      </div>
-    </div>
+    <button
+      type="button"
+      className={iconButtonClass}
+      aria-label="Copy smart link"
+      title="Copy smart link"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(smartLinkUrl(slug));
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // Clipboard blocked; the release page shows the link in full.
+        }
+      }}
+    >
+      {copied ? <Check size={16} className="text-signal" /> : <Copy size={16} />}
+    </button>
   );
 };
 
 const Library: React.FC = () => {
-  const { items, loading, reload } = useLibrary();
-  const { connections } = useConnections();
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  const togglePublic = async (item: LibraryItem) => {
-    await supabase.from('content_items').update({ is_public: !item.is_public }).eq('id', item.id);
-    reload();
-  };
-
-  const remove = async (item: LibraryItem) => {
-    if (!window.confirm(`Delete "${item.title}" and its clips from your library? Posts already on other platforms stay there.`)) return;
-    await supabase.storage.from(MEDIA_BUCKET).remove([item.storage_path, ...item.clips.map((c) => c.storage_path)]);
-    await supabase.from('content_items').delete().eq('id', item.id);
-    reload();
-  };
+  const { releases, loading } = useReleases();
+  const [filter, setFilter] = useState<Filter>('all');
+  const counts = Object.fromEntries(FILTERS.map((f) => [f.id, f.id === 'all' ? releases.length : releases.filter((r) => r.health === f.id).length]));
+  const visible = releases.filter((r) => filter === 'all' || r.health === filter);
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow={`Studio / Library · ${items.length} upload${items.length === 1 ? '' : 's'}`}
-        title="Library"
-        description="Everything you've uploaded. Push any item, or a clip of it, to more platforms."
+        eyebrow={`Studio / My music · ${releases.length} release${releases.length === 1 ? '' : 's'}`}
+        title="My music"
+        description="Every release, where it’s live, and its smart link. Open one to edit it, post it to more platforms or check its splits."
         underline="double"
         doodle="notes"
-        actions={<Link to="/dashboard/publish"><Button leftIcon={<UploadCloud size={16} />}>New upload</Button></Link>}
+        actions={<Link to="/dashboard/publish"><Button leftIcon={<Plus size={16} />}>New release</Button></Link>}
       />
 
-      {loading && <p className="eyebrow text-white/50">Loading…</p>}
-      {!loading && items.length === 0 && (
-        <div className="border border-dashed border-white/20 p-8 text-center">
-          <h3>No uploads yet</h3>
-          <p className="text-sm text-white/55 mt-2">Drop in a track or video and it will live here.</p>
-          <Link to="/dashboard/publish" className="inline-block mt-5"><Button>Upload something</Button></Link>
+      {releases.length > 0 && (
+        <div className={segmentGroupClass} role="group" aria-label="Filter releases">
+          {FILTERS.filter((f) => f.id === 'all' || counts[f.id] > 0).map((f) => (
+            <button key={f.id} type="button" aria-pressed={filter === f.id} className={segmentClass(filter === f.id)} onClick={() => setFilter(f.id)}>
+              {f.label} <span className="opacity-60">{counts[f.id]}</span>
+            </button>
+          ))}
         </div>
       )}
 
-      <div className="space-y-4">
-        {items.map((item) => {
-          const published = item.jobs.filter((j) => j.status === 'published');
-          const open = openId === item.id;
+      {loading && <p className="eyebrow text-white/50">Loading…</p>}
+      {!loading && releases.length === 0 && (
+        <div className="border border-dashed border-white/20 p-8 text-center">
+          <h3>No releases yet</h3>
+          <p className="text-sm text-white/55 mt-2">Put out a single, EP or album and it lives here.</p>
+          <Link to="/dashboard/publish" className="inline-block mt-5"><Button>Start a release</Button></Link>
+        </div>
+      )}
+
+      <ul className="space-y-3">
+        {visible.map((release) => {
+          const live = release.jobs.filter((j) => j.status === 'published');
+          const platforms = [...new Set(live.map((j) => j.target))].length;
+          const upcoming = isUpcoming(release);
           return (
-            <div key={item.id} className={cn(cardClass, open && 'border-signal/60')}>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  <div className="w-12 h-12 bg-signal text-ink grid place-items-center shrink-0">
-                    {item.media_type === 'video' ? <FileVideo size={22} /> : <FileAudio size={22} />}
+            <li key={release.id} className="group relative flex flex-col sm:flex-row sm:items-center gap-4 border border-white/15 bg-ink p-4 hover:border-white/35 transition-colors">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <CoverThumb release={release} className="h-16 w-16 sm:h-20 sm:w-20" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="tag-yellow">{KIND_LABEL[release.kind]}</span>
+                    <HealthBadge health={release.health} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="truncate">{item.title}</h3>
-                    <p className="font-mono text-[11px] text-white/45 mt-1">
-                      {formatDate(item.created_at)} · {formatBytes(item.file_size)} · {published.length} post
-                      {published.length === 1 ? '' : 's'}
-                      {item.clips.length > 0 && ` · ${item.clips.length} clip${item.clips.length === 1 ? '' : 's'}`}
-                      {!item.is_public && ' · hidden from page'}
-                    </p>
-                    {published.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {published.map((job) => {
-                          const label = `${targetName(job.target)}${job.fromClip ? ' · clip' : ''}`;
-                          return job.external_url ? (
-                            <a key={job.id} href={job.external_url} target="_blank" rel="noopener noreferrer"
-                              className="tag-yellow hover:bg-white transition-colors">
-                              {label} ↗
-                            </a>
-                          ) : (
-                            <span key={job.id} className="tag-yellow">{label}</span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 sm:pl-0 pl-16">
-                  <button onClick={() => togglePublic(item)} className={iconButtonClass}
-                    aria-label={item.is_public ? 'Hide from my page' : 'Show on my page'}
-                    title={item.is_public ? 'Shown on your page (click to hide)' : 'Hidden from your page (click to show)'}>
-                    {item.is_public ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
-                  <button onClick={() => remove(item)} className={cn(iconButtonClass, 'hover:!border-error-400 hover:!text-error-400')}
-                    aria-label="Delete" title="Delete">
-                    <Trash2 size={16} />
-                  </button>
-                  <Button size="sm" variant={open ? 'primary' : 'outline'} className="h-9"
-                    onClick={() => setOpenId(open ? null : item.id)} leftIcon={open ? undefined : <Send size={14} />}>
-                    {open ? 'Close' : 'Publish'}
-                  </Button>
+                  <Link to={`/dashboard/library/${release.id}`} className="block after:absolute after:inset-0">
+                    <h3 className="truncate group-hover:text-signal transition-colors">{release.title}</h3>
+                  </Link>
+                  <p className="font-mono text-[11px] text-white/45 mt-1 truncate">
+                    {release.artist_name} · {release.tracks.length} track{release.tracks.length === 1 ? '' : 's'} ·{' '}
+                    {upcoming ? `out ${formatReleaseDate(release.release_at, true)}` : formatReleaseDate(release.release_at ?? release.created_at)}
+                  </p>
                 </div>
               </div>
-              {open && <PublishPanel item={item} connections={connections} onDone={reload} />}
-            </div>
+              <div className="relative z-10 flex items-center gap-4 sm:gap-5 shrink-0 pl-20 sm:pl-0">
+                <span className="text-right">
+                  <span className="block font-mono text-sm tabular-nums">{platforms}</span>
+                  <span className="block eyebrow text-white/40">Platforms</span>
+                </span>
+                <span className="text-right">
+                  <span className="flex items-center justify-end gap-1 font-mono text-sm tabular-nums"><Eye size={12} className="text-white/40" />{release.smart_link_visits}</span>
+                  <span className="block eyebrow text-white/40">Visits</span>
+                </span>
+                <CopyLink slug={release.slug} />
+                <a href={`/r/${release.slug}`} target="_blank" rel="noopener noreferrer" className={iconButtonClass} aria-label="Open smart link" title="Open smart link">
+                  <Link2 size={16} />
+                </a>
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 };

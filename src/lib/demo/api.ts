@@ -49,24 +49,35 @@ async function publish(body: { contentId?: string; target?: string; options?: Re
   const connection = table('platform_connections').find((c) => c.user_id === userId && c.provider === config.provider);
   if (!connection) throw new ApiError(`Connect your ${target} account first.`);
 
+  const scheduledFor = typeof body.options?.scheduledFor === 'string' ? body.options.scheduledFor : null;
+  const scheduled = scheduledFor !== null && new Date(scheduledFor).getTime() > Date.now();
+
   const job: Row = {
     id: uid(),
     user_id: userId,
     content_id: content.id,
     target,
-    status: 'processing',
+    status: scheduled ? 'scheduled' : 'processing',
     options: body.options ?? {},
     external_id: null,
     external_url: null,
     external_meta: { demo: true },
     error: null,
+    scheduled_for: scheduled ? scheduledFor : null,
     created_at: now(),
     updated_at: now(),
   };
   table('publish_jobs').push(job);
   save();
+  if (scheduled) return { job };
 
-  // Simulated upload + platform processing time.
+  return { job: await goLive(job, connection) };
+}
+
+// Simulated upload + platform processing, then the post is live.
+async function goLive(job: Row, connection: Row) {
+  const target = job.target as Target;
+  const config = TARGETS[target];
   const [min, max] = config.seconds;
   await wait((min + Math.random() * (max - min)) * 1000);
 
@@ -85,7 +96,39 @@ async function publish(body: { contentId?: string; target?: string; options?: Re
     updated_at: now(),
   });
   save();
-  return { job };
+  return job;
+}
+
+let ticking = false;
+
+// Stand-in for the api/cron/scheduled job: publishes scheduled posts that are due.
+// Demo mode runs it while the app is open (see DemoBadge).
+export async function runDueJobs() {
+  if (ticking) return 0;
+  ticking = true;
+  try {
+    const due = table('publish_jobs').filter(
+      (j) => j.status === 'scheduled' && new Date(j.scheduled_for as string).getTime() <= Date.now()
+    );
+    await Promise.all(
+      due.map(async (job) => {
+        const config = TARGETS[job.target as Target];
+        const connection = table('platform_connections').find((c) => c.user_id === job.user_id && c.provider === config.provider);
+        // Metrics count from when the post went live.
+        Object.assign(job, { status: 'processing', created_at: now(), updated_at: now() });
+        save();
+        if (!connection) {
+          Object.assign(job, { status: 'failed', error: `Your ${job.target} account was disconnected before release day.`, updated_at: now() });
+          save();
+          return;
+        }
+        await goLive(job, connection).catch(() => undefined);
+      })
+    );
+    return due.length;
+  } finally {
+    ticking = false;
+  }
 }
 
 // Views grow quickly at first and level off, scaled per platform and per post.

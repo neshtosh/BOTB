@@ -6,6 +6,7 @@ import { getState, Row, save, table } from './db';
 import { getFile, putFile } from './blobStore';
 import { metricsFor } from './api';
 import { synthesizeDemo } from '../demoTrack';
+import { makeSquareCover } from '../covers';
 import { mockCreators } from '../../data/mockCreators';
 
 export const DEMO_EMAIL = 'demo@unsigned.app';
@@ -13,12 +14,27 @@ export const DEMO_PASSWORD = 'unsigned-demo';
 const DEMO_USER_ID = '00000000-0000-4000-8000-00000000de00';
 
 const daysAgo = (d: number, h = 0) => new Date(Date.now() - (d * 24 + h) * 3_600_000).toISOString();
+// Midnight local time, n days from now (the upcoming release).
+const daysAhead = (d: number) => {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  t.setDate(t.getDate() + d);
+  return t.toISOString();
+};
+
+const RELEASES = {
+  matatu: 'r0000000-0000-4000-8000-000000000001',
+  visualizer: 'r0000000-0000-4000-8000-000000000002',
+  paperCuts: 'r0000000-0000-4000-8000-000000000003',
+};
 
 const FILES = {
   matatu: `${DEMO_USER_ID}/seed-midnight-matatu.wav`,
   paperCuts: `${DEMO_USER_ID}/seed-paper-cuts.wav`,
   visualizer: `${DEMO_USER_ID}/seed-matatu-visualizer.webm`,
   clip: `${DEMO_USER_ID}/seed-matatu-clip.webm`,
+  matatuCover: `${DEMO_USER_ID}/covers/seed-midnight-matatu.jpg`,
+  paperCutsCover: `${DEMO_USER_ID}/covers/seed-paper-cuts.jpg`,
 };
 
 export function seedIfEmpty() {
@@ -59,6 +75,62 @@ export function seedIfEmpty() {
     }))
   );
 
+  const release = (id: string, fields: Row): Row => ({
+    id,
+    user_id: DEMO_USER_ID,
+    artist_name: 'Kasi Moto',
+    kind: 'single',
+    primary_genre: 'Dance',
+    secondary_genre: 'Afro House',
+    language: 'English',
+    description: '',
+    tags: [],
+    previously_released: false,
+    original_release_date: null,
+    release_at: null,
+    cover_path: null,
+    is_public: true,
+    splits: [],
+    smart_link_visits: 0,
+    ...fields,
+    updated_at: fields.created_at,
+  });
+
+  table('releases').push(
+    release(RELEASES.matatu, {
+      slug: 'midnight-matatu',
+      title: 'Midnight Matatu',
+      description: 'New single. Self-released, mixed in my bedroom, built for the matatu speakers.',
+      tags: ['afrohouse', 'independent', 'newmusic'],
+      cover_path: FILES.matatuCover,
+      splits: [
+        { name: 'Kasi Moto', email: DEMO_EMAIL, role: 'Artist', share: 70 },
+        { name: 'Saka Beats', email: 'saka@example.com', role: 'Producer', share: 30 },
+      ],
+      smart_link_visits: 412,
+      created_at: daysAgo(6),
+    }),
+    release(RELEASES.visualizer, {
+      slug: 'midnight-matatu-visualizer',
+      title: 'Midnight Matatu (Visualizer)',
+      description: 'Visualizer for the new single.',
+      tags: ['visualizer', 'afrohouse'],
+      cover_path: FILES.matatuCover,
+      smart_link_visits: 96,
+      created_at: daysAgo(3),
+    }),
+    release(RELEASES.paperCuts, {
+      slug: 'paper-cuts',
+      title: 'Paper Cuts',
+      description: 'Next single. Out soon — pre-save it.',
+      tags: ['afrohouse', 'comingsoon'],
+      release_at: daysAhead(9),
+      cover_path: FILES.paperCutsCover,
+      smart_link_visits: 57,
+      created_at: daysAgo(1),
+    })
+  );
+
   const item = (id: string, fields: Row): Row => ({
     id,
     user_id: DEMO_USER_ID,
@@ -68,11 +140,28 @@ export function seedIfEmpty() {
     parent_id: null,
     clip_start: null,
     clip_duration: null,
+    release_id: null,
+    track_number: null,
+    version: '',
+    featured_artists: [],
+    songwriters: [],
+    is_cover: false,
+    explicit: false,
+    instrumental: false,
+    ai_generated: false,
+    hook_start: null,
+    ...fields,
+  });
+  const track = (releaseId: string, fields: Row) => ({
+    release_id: releaseId,
+    track_number: 1,
+    songwriters: ['Kasimir Moto'],
     ...fields,
   });
 
   table('content_items').push(
     item('c0000000-0000-4000-8000-000000000001', {
+      ...track(RELEASES.matatu, { hook_start: 24, featured_artists: [{ name: 'Saka Beats', role: 'featured' }] }),
       title: 'Midnight Matatu',
       description: 'New single. Self-released, mixed in my bedroom, built for the matatu speakers.',
       tags: ['afrohouse', 'independent', 'newmusic'],
@@ -97,6 +186,7 @@ export function seedIfEmpty() {
       created_at: daysAgo(6, -1),
     }),
     item('c0000000-0000-4000-8000-000000000003', {
+      ...track(RELEASES.visualizer, { version: 'Visualizer' }),
       title: 'Midnight Matatu (Visualizer)',
       description: 'Visualizer for the new single.',
       tags: ['visualizer', 'afrohouse'],
@@ -107,9 +197,10 @@ export function seedIfEmpty() {
       created_at: daysAgo(3),
     }),
     item('c0000000-0000-4000-8000-000000000004', {
-      title: 'Paper Cuts (demo)',
-      description: 'Unfinished idea. Not released yet.',
-      tags: ['demo'],
+      ...track(RELEASES.paperCuts, { hook_start: 30 }),
+      title: 'Paper Cuts',
+      description: 'Next single. Out soon — pre-save it.',
+      tags: ['afrohouse', 'comingsoon'],
       media_type: 'audio',
       storage_path: FILES.paperCuts,
       mime_type: 'audio/wav',
@@ -146,7 +237,25 @@ export function seedIfEmpty() {
     job(4, 'c0000000-0000-4000-8000-000000000002', 'facebook', daysAgo(6, -1), 'New single — stream it today'),
     job(5, 'c0000000-0000-4000-8000-000000000003', 'youtube', daysAgo(3), 'Midnight Matatu (Visualizer)'),
   ];
-  table('publish_jobs').push(...jobs);
+  table('publish_jobs').push(...jobs, {
+    // Paper Cuts is waiting for release day.
+    ...job(6, 'c0000000-0000-4000-8000-000000000004', 'soundcloud', daysAgo(1), 'Paper Cuts — out now.'),
+    status: 'scheduled',
+    scheduled_for: daysAhead(9),
+    external_id: null,
+    external_url: null,
+  });
+
+  // Fans who pre-saved Paper Cuts from its smart link.
+  const fans = ['halima', 'brian', 'ciku', 'dan', 'eve', 'fatma', 'gitau', 'hana', 'ivy', 'juma', 'kemi', 'lulu'];
+  fans.forEach((name, i) =>
+    table('release_presaves').push({
+      id: `s0000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      release_id: RELEASES.paperCuts,
+      email: `${name}@example.com`,
+      created_at: daysAgo(0, 20 - i),
+    })
+  );
   const fetched = Date.now() - 2 * 3_600_000;
   table('post_metrics').push(...jobs.map((j) => ({ job_id: j.id, user_id: DEMO_USER_ID, ...metricsFor(j, fetched), fetched_at: new Date(fetched).toISOString() })));
 
@@ -247,6 +356,8 @@ export function ensureSeedMedia() {
     if (await missing(FILES.matatu)) await putFile(FILES.matatu, encodeWav(synthesizeDemo(), 22050));
     // Same track, played back higher and faster — a different-sounding demo.
     if (await missing(FILES.paperCuts)) await putFile(FILES.paperCuts, encodeWav(synthesizeDemo(), 26000));
+    if (await missing(FILES.matatuCover)) await putFile(FILES.matatuCover, await makeSquareCover('Midnight Matatu', 'Kasi Moto'));
+    if (await missing(FILES.paperCutsCover)) await putFile(FILES.paperCutsCover, await makeSquareCover('Paper Cuts', 'Kasi Moto'));
     if (await missing(FILES.visualizer)) {
       const video = await recordVisualizer(6, false);
       if (video) await putFile(FILES.visualizer, video);
