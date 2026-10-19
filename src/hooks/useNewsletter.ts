@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -11,11 +11,6 @@ export function useNewsletter(creatorId?: string) {
 
   const subscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSupabaseConfigured) {
-      setStatus('error');
-      setMessage('Signups are not available yet.');
-      return;
-    }
     setStatus('loading');
     const { error } = await supabase
       .from('newsletter_subscribers')

@@ -1,10 +1,28 @@
-# BOTB #
+# Unsigned — Be your own label
 
-The official site for BOTB / Bounce Beats Ent, plus a creator studio where any
-creator can upload content once and publish it to YouTube, TikTok, Instagram,
-Facebook and SoundCloud automatically.
+The release desk for independent artists and creators: upload once, clip the
+hook, and publish to YouTube, TikTok, Instagram, Facebook and SoundCloud yourself.
 
-- **Public site**: music, videos, events, about, newsletter (`src/pages`)
+## Demo mode (no setup needed)
+
+If `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are not set (or `VITE_DEMO_MODE=true`),
+the app runs against an **in-browser mock backend** (`src/lib/demo/`) so the whole UI
+works without any services:
+
+| | |
+| --- | --- |
+| Demo login | `demo@unsigned.app` / `unsigned-demo` (fictional creator “Kasi Moto”) |
+| Sign up | works too — accounts are stored only in your browser |
+| Data | localStorage + IndexedDB for uploaded files; seed media is generated in the browser |
+| Platforms | mock consent screens at `/demo/connect/:provider`, simulated publishing, analytics that grow over time, simulated posts at `/demo/post/:id` |
+| Reset | click the yellow **Demo mode** badge (bottom-left) → Reset demo data |
+
+Demo mode follows the same rules as the real backend (which formats each platform takes,
+connections required, per-user data). Set the Supabase variables to switch to live mode.
+
+## What's in it
+
+- **Landing page** (`/`): what Unsigned is and how it works
 - **Creator pages**: every creator gets `/c/<handle>` with their public uploads and their own mailing list
 - **Creator studio**: `/dashboard` for uploads, platform connections, publishing, analytics and profile
 - **Per-platform posts**: each platform gets the full file or a clip, with its own caption. Songs only go to social platforms as clips; SoundCloud gets the full track.

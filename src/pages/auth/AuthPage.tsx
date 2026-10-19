@@ -3,7 +3,8 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/common/Button';
 import { inputClass, labelClass } from '../../components/dashboard/styles';
-import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isDemoMode, supabase } from '../../lib/supabase';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../../lib/demo/seed';
 import { useAuth } from '../../context/AuthContext';
 import { siteConfig } from '../../config/site';
 import type { CreatorType } from '../../types/platform';
@@ -92,10 +93,36 @@ const AuthPage: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
             : 'Log in to manage and publish your content.'}
         </p>
 
-        {!isSupabaseConfigured && (
-          <p className="text-sm text-warning-400 mb-4">
-            Accounts aren't configured yet: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
-          </p>
+        {isDemoMode && (
+          <div className="mb-6 border border-dashed border-signal/60 bg-signal/5 p-4 text-sm">
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-signal mb-2">Demo mode</p>
+            {isSignup ? (
+              <p className="text-white/70">
+                Accounts are stored only in this browser. Or skip sign-up and{' '}
+                <Link to="/login" className="text-signal underline underline-offset-4">use the demo account</Link>.
+              </p>
+            ) : (
+              <>
+                <p className="text-white/70">Log in as the demo creator (Kasi Moto):</p>
+                <dl className="mt-2 grid grid-cols-[5rem_1fr] gap-y-1 font-mono text-xs">
+                  <dt className="text-white/50">Email</dt>
+                  <dd>{DEMO_EMAIL}</dd>
+                  <dt className="text-white/50">Password</dt>
+                  <dd>{DEMO_PASSWORD}</dd>
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail(DEMO_EMAIL);
+                    setPassword(DEMO_PASSWORD);
+                  }}
+                  className="mt-3 bg-signal text-ink px-3 py-1.5 text-xs font-semibold hover:bg-white transition-colors"
+                >
+                  Fill in demo login
+                </button>
+              </>
+            )}
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -140,7 +167,7 @@ const AuthPage: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
           {error && <p className="text-sm text-error-400">{error}</p>}
           {notice && <p className="text-sm text-success-400">{notice}</p>}
 
-          <Button type="submit" fullWidth size="lg" isLoading={submitting} disabled={!isSupabaseConfigured}>
+          <Button type="submit" fullWidth size="lg" isLoading={submitting} >
             {isSignup ? 'Create account' : 'Log in'}
           </Button>
         </form>

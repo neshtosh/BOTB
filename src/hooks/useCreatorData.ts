@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { ContentItem, PlatformConnection, PublishJob } from '../types/platform';
 
 export function useConnections() {
@@ -33,11 +34,17 @@ export interface LibraryItem extends ContentItem {
 export function useLibrary() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const reload = useCallback(async () => {
+    if (!userId) return;
+    // Filter by owner explicitly: RLS also lets everyone read *public* items,
+    // which must not show up in someone else's studio.
     const { data } = await supabase
       .from('content_items')
       .select('*, publish_jobs(*)')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
     const rows = (data as (ContentItem & { publish_jobs: PublishJob[] })[]) ?? [];
 
@@ -53,7 +60,7 @@ export function useLibrary() {
       })
     );
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     reload();

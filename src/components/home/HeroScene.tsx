@@ -410,7 +410,7 @@ const Tunnel: React.FC = () => {
       </mesh>
       {/* Arched brick ceiling */}
       <mesh position={[MID, FLOOR + HEIGHT, CENTER_Z]} rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[RADIUS, RADIUS, LENGTH, 40, 1, true, -Math.PI / 2, Math.PI]} />
+        <cylinderGeometry args={[RADIUS, RADIUS, LENGTH, 40, 1, true, Math.PI / 2, Math.PI]} />
         <meshBasicMaterial map={textures.brick} side={THREE.BackSide} color="#8a8a8a" />
       </mesh>
       {/* Fluorescent strips along the top of the left wall */}

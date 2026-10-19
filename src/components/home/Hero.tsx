@@ -65,6 +65,8 @@ const Hero: React.FC = () => {
       {/* Darken only behind the copy (bottom-left) so the graffiti stays visible elsewhere. */}
       <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/10 to-transparent pointer-events-none" />
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_70%_60%_at_15%_85%,rgba(11,11,12,0.85),transparent_70%)]" />
+      {/* Phones: the copy covers most of the scene, so fade the lower half more strongly. */}
+      <div className="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none bg-gradient-to-t from-ink via-ink/85 to-transparent lg:hidden" />
 
       {/* Copy */}
       <motion.div
