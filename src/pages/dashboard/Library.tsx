@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, FileAudio, FileVideo, Send, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, FileAudio, FileVideo, Send, Trash2, UploadCloud } from 'lucide-react';
 import Button from '../../components/common/Button';
 import PublishComposer from '../../components/dashboard/PublishComposer';
-import { cardClass, inputClass, labelClass } from '../../components/dashboard/styles';
+import { cardClass, iconButtonClass, labelClass, selectClass } from '../../components/dashboard/styles';
+import { PageHeader } from '../../components/dashboard/Studio';
+import { targetName } from '../../config/platforms';
+import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import { LibraryItem, useConnections, useLibrary } from '../../hooks/useCreatorData';
 import {
@@ -58,7 +61,8 @@ const PublishPanel: React.FC<{
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-surface-300/40 space-y-4">
+    <div className="mt-5 pt-5 border-t border-dashed border-white/15 space-y-5">
+      <p className="eyebrow text-signal">Publish “{item.title}” to more platforms</p>
       <PublishComposer
         mediaType={item.media_type}
         connections={connections}
@@ -74,7 +78,7 @@ const PublishPanel: React.FC<{
       <div className="flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
           <label className={labelClass} htmlFor={`privacy-${item.id}`}>Visibility</label>
-          <select id={`privacy-${item.id}`} className={inputClass} value={plan.privacy} disabled={busy}
+          <select id={`privacy-${item.id}`} className={selectClass} value={plan.privacy} disabled={busy}
             onChange={(e) => setPlan({ ...plan, privacy: e.target.value as 'public' | 'private' })}>
             <option value="public">Public</option>
             <option value="private">Private</option>
@@ -107,70 +111,78 @@ const Library: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl">Library</h1>
-          <p className="text-surface-600 mt-1">Everything you've uploaded. Push any item, or a clip of it, to more platforms.</p>
-        </div>
-        <Link to="/dashboard/publish"><Button>New upload</Button></Link>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow={`Studio / Library · ${items.length} upload${items.length === 1 ? '' : 's'}`}
+        title="Library"
+        description="Everything you've uploaded. Push any item, or a clip of it, to more platforms."
+        underline="double"
+        doodle="notes"
+        actions={<Link to="/dashboard/publish"><Button leftIcon={<UploadCloud size={16} />}>New upload</Button></Link>}
+      />
 
-      {loading && <p className="text-surface-600">Loading…</p>}
+      {loading && <p className="eyebrow text-white/50">Loading…</p>}
       {!loading && items.length === 0 && (
-        <div className={cardClass}>
-          <p className="text-surface-600">No uploads yet.</p>
+        <div className="border border-dashed border-white/20 p-8 text-center">
+          <h3>No uploads yet</h3>
+          <p className="text-sm text-white/55 mt-2">Drop in a track or video and it will live here.</p>
+          <Link to="/dashboard/publish" className="inline-block mt-5"><Button>Upload something</Button></Link>
         </div>
       )}
 
       <div className="space-y-4">
         {items.map((item) => {
           const published = item.jobs.filter((j) => j.status === 'published');
+          const open = openId === item.id;
           return (
-            <div key={item.id} className={cardClass}>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-surface-300 flex items-center justify-center shrink-0">
-                  {item.media_type === 'video' ? <FileVideo size={22} /> : <FileAudio size={22} />}
+            <div key={item.id} className={cn(cardClass, open && 'border-signal/60')}>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="w-12 h-12 bg-signal text-ink grid place-items-center shrink-0">
+                    {item.media_type === 'video' ? <FileVideo size={22} /> : <FileAudio size={22} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="truncate">{item.title}</h3>
+                    <p className="font-mono text-[11px] text-white/45 mt-1">
+                      {formatDate(item.created_at)} · {formatBytes(item.file_size)} · {published.length} post
+                      {published.length === 1 ? '' : 's'}
+                      {item.clips.length > 0 && ` · ${item.clips.length} clip${item.clips.length === 1 ? '' : 's'}`}
+                      {!item.is_public && ' · hidden from page'}
+                    </p>
+                    {published.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {published.map((job) => {
+                          const label = `${targetName(job.target)}${job.fromClip ? ' · clip' : ''}`;
+                          return job.external_url ? (
+                            <a key={job.id} href={job.external_url} target="_blank" rel="noopener noreferrer"
+                              className="tag-yellow hover:bg-white transition-colors">
+                              {label} ↗
+                            </a>
+                          ) : (
+                            <span key={job.id} className="tag-yellow">{label}</span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h5 className="truncate">{item.title}</h5>
-                  <p className="text-xs text-surface-600">
-                    {formatDate(item.created_at)} · {formatBytes(item.file_size)} · {published.length} post
-                    {published.length === 1 ? '' : 's'}
-                    {item.clips.length > 0 && ` · ${item.clips.length} clip${item.clips.length === 1 ? '' : 's'}`}
-                  </p>
-                  {published.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {published.map((job) => {
-                        const label = `${job.target}${job.fromClip ? ' (clip)' : ''}`;
-                        return job.external_url ? (
-                          <a key={job.id} href={job.external_url} target="_blank" rel="noopener noreferrer"
-                            className="text-2xs bg-success-500/20 text-success-300 rounded-full px-2 py-0.5 hover:bg-success-500/30">
-                            {label} ↗
-                          </a>
-                        ) : (
-                          <span key={job.id} className="text-2xs bg-success-500/20 text-success-300 rounded-full px-2 py-0.5">
-                            {label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => togglePublic(item)} className="p-2 rounded-lg hover:bg-surface-300 text-surface-700"
+                <div className="flex items-center gap-2 shrink-0 sm:pl-0 pl-16">
+                  <button onClick={() => togglePublic(item)} className={iconButtonClass}
+                    aria-label={item.is_public ? 'Hide from my page' : 'Show on my page'}
                     title={item.is_public ? 'Shown on your page (click to hide)' : 'Hidden from your page (click to show)'}>
-                    {item.is_public ? <Eye size={18} /> : <EyeOff size={18} />}
+                    {item.is_public ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
-                  <button onClick={() => remove(item)} className="p-2 rounded-lg hover:bg-surface-300 text-surface-700" title="Delete">
-                    <Trash2 size={18} />
+                  <button onClick={() => remove(item)} className={cn(iconButtonClass, 'hover:!border-error-400 hover:!text-error-400')}
+                    aria-label="Delete" title="Delete">
+                    <Trash2 size={16} />
                   </button>
-                  <Button size="sm" variant="outline" onClick={() => setOpenId(openId === item.id ? null : item.id)}>
-                    {openId === item.id ? 'Close' : 'Publish'}
+                  <Button size="sm" variant={open ? 'primary' : 'outline'} className="h-9"
+                    onClick={() => setOpenId(open ? null : item.id)} leftIcon={open ? undefined : <Send size={14} />}>
+                    {open ? 'Close' : 'Publish'}
                   </Button>
                 </div>
               </div>
-              {openId === item.id && <PublishPanel item={item} connections={connections} onDone={reload} />}
+              {open && <PublishPanel item={item} connections={connections} onDone={reload} />}
             </div>
           );
         })}

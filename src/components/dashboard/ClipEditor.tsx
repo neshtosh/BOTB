@@ -3,7 +3,7 @@ import { ImagePlus, Pause, Play, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { analyzeAudio, AudioAnalysis, findHooks, HOP_SECONDS } from '../../lib/clip';
 import type { ClipSettings } from '../../lib/publishPlan';
-import { labelClass } from './styles';
+import { labelClass, segmentClass, segmentGroupClass } from './styles';
 import type { MediaType } from '../../types/platform';
 
 const CLIP_LENGTHS = [15, 30, 60];
@@ -90,7 +90,7 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
   return (
     <div className="space-y-4">
       {mediaType === 'video' ? (
-        <video ref={mediaRef} src={sourceUrl} className="w-full max-h-64 rounded-xl bg-black" onPlay={() => setPlaying(true)}
+        <video ref={mediaRef} src={sourceUrl} className="w-full max-h-64 bg-black border border-white/10" onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)} onTimeUpdate={onTimeUpdate} playsInline />
       ) : (
         <audio ref={mediaRef} src={sourceUrl} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={onTimeUpdate} />
@@ -98,13 +98,13 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className={labelClass}>Clip section</span>
-          <span className="text-xs text-surface-600">
+          <span className={cn(labelClass, 'mb-0')}>Clip section</span>
+          <span className="font-mono text-[11px] text-white/50 tabular-nums">
             {fmt(value.start)} – {fmt(value.start + value.duration)} of {fmt(duration)}
           </span>
         </div>
         <div
-          className={cn('relative h-16 rounded-lg bg-surface-200 overflow-hidden', !disabled && 'cursor-pointer')}
+          className={cn('relative h-16 bg-white/[0.04] border border-white/10 overflow-hidden', !disabled && 'cursor-pointer')}
           onClick={(e) => {
             if (disabled || !duration) return;
             const rect = e.currentTarget.getBoundingClientRect();
@@ -112,26 +112,26 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
           }}
         >
           <div className="absolute inset-0 flex items-center gap-px px-1">
-            {bars.length === 0 && <div className="w-full text-center text-xs text-surface-600">{analysisError || 'Analysing audio…'}</div>}
+            {bars.length === 0 && <div className="w-full text-center eyebrow text-white/45">{analysisError || 'Analysing audio…'}</div>}
             {bars.map((b, i) => (
-              <div key={i} className="flex-1 bg-surface-500 rounded-full" style={{ height: `${Math.max(6, b * 100)}%` }} />
+              <div key={i} className="flex-1 bg-white/35" style={{ height: `${Math.max(6, b * 100)}%` }} />
             ))}
           </div>
-          <div className="absolute inset-y-0 bg-primary-500/30 border-x-2 border-primary-400" style={{ left: `${startPct}%`, width: `${widthPct}%` }} />
+          <div className="absolute inset-y-0 bg-signal/25 border-x-2 border-signal" style={{ left: `${startPct}%`, width: `${widthPct}%` }} />
         </div>
         <input type="range" min={0} max={maxStart} step={HOP_SECONDS} value={value.start} disabled={disabled}
-          onChange={(e) => setStart(Number(e.target.value))} className="w-full mt-2 accent-primary-500" aria-label="Clip start" />
+          onChange={(e) => setStart(Number(e.target.value))} className="w-full mt-3 accent-[#f2e600] cursor-pointer" aria-label="Clip start" />
       </div>
 
       {hooks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1 text-xs text-surface-700">
-            <Sparkles size={14} className="text-accent-400" /> Suggested hooks:
+          <span className="flex items-center gap-1.5 eyebrow text-white/60">
+            <Sparkles size={14} className="text-signal" /> Suggested hooks
           </span>
           {hooks.map((h, i) => (
             <button key={h.start} type="button" disabled={disabled} onClick={() => setStart(h.start)}
-              className={cn('text-xs rounded-full px-3 py-1 border transition-colors',
-                Math.abs(value.start - h.start) < 0.5 ? 'border-primary-400 bg-primary-500/20 text-primary-200' : 'border-surface-400 hover:border-surface-600')}>
+              className={cn('font-mono text-[11px] px-2.5 py-1 border transition-colors tabular-nums',
+                Math.abs(value.start - h.start) < 0.5 ? 'border-signal bg-signal text-ink' : 'border-white/20 text-white/70 hover:border-signal hover:text-signal')}>
               {i === 0 ? 'Best · ' : ''}{fmt(h.start)}
             </button>
           ))}
@@ -140,13 +140,13 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={togglePreview} disabled={disabled}
-          className="flex items-center gap-2 text-sm rounded-full bg-surface-300 hover:bg-surface-400 px-4 py-1.5">
+          className="flex items-center gap-2 text-sm border border-white/30 hover:border-signal hover:bg-signal hover:text-ink transition-colors px-4 py-1.5">
           {playing ? <Pause size={14} /> : <Play size={14} />} Preview clip
         </button>
-        <div className="flex rounded-full bg-surface-200 p-0.5">
+        <div className={segmentGroupClass} role="group" aria-label="Clip length">
           {CLIP_LENGTHS.map((len) => (
             <button key={len} type="button" disabled={disabled} onClick={() => onChange({ ...value, duration: len, start: Math.min(value.start, Math.max(0, duration - len)) })}
-              className={cn('text-xs rounded-full px-3 py-1', value.duration === len ? 'bg-signal text-ink font-semibold' : 'text-surface-700')}>
+              aria-pressed={value.duration === len} className={segmentClass(value.duration === len)}>
               {len}s
             </button>
           ))}
@@ -155,12 +155,12 @@ const ClipEditor: React.FC<ClipEditorProps> = ({ source, mediaType, value, onCha
 
       {mediaType === 'audio' && (
         <div className="flex items-center gap-3">
-          <label className="relative w-16 h-28 rounded-lg overflow-hidden bg-surface-200 border border-surface-400 flex items-center justify-center cursor-pointer shrink-0">
-            {coverUrl ? <img src={coverUrl} alt="Clip cover" className="w-full h-full object-cover" /> : <ImagePlus size={20} className="text-surface-600" />}
+          <label className="relative w-16 h-28 overflow-hidden bg-white/[0.04] border border-dashed border-white/25 hover:border-signal transition-colors flex items-center justify-center cursor-pointer shrink-0">
+            {coverUrl ? <img src={coverUrl} alt="Clip cover" className="w-full h-full object-cover" /> : <ImagePlus size={20} className="text-white/50" />}
             <input type="file" accept="image/*" className="hidden" disabled={disabled}
               onChange={(e) => onChange({ ...value, cover: e.target.files?.[0] ?? null })} />
           </label>
-          <p className="text-xs text-surface-600">
+          <p className="text-xs text-white/50">
             Cover art shown in the video while the clip plays. Without one, we generate a cover with your title.
           </p>
         </div>

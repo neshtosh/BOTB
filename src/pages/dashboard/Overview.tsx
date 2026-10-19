@@ -3,17 +3,11 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, UploadCloud } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { cardClass } from '../../components/dashboard/styles';
+import { PageHeader, PanelTitle, StatusTag } from '../../components/dashboard/Studio';
 import { useAuth } from '../../context/AuthContext';
 import { useConnections, useLibrary } from '../../hooks/useCreatorData';
 import { targetName } from '../../config/platforms';
 import { cn } from '../../utils/cn';
-
-const statusStyles = {
-  queued: 'text-surface-600',
-  processing: 'text-primary-400',
-  published: 'text-success-400',
-  failed: 'text-error-400',
-};
 
 const Overview: React.FC = () => {
   const { profile } = useAuth();
@@ -28,69 +22,85 @@ const Overview: React.FC = () => {
   const stats = [
     { label: 'Uploads', value: items.length },
     { label: 'Posts published', value: publishedCount },
-    { label: 'Connected platforms', value: connections.length },
+    { label: 'Platforms connected', value: connections.length },
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl">Hey {profile?.display_name ?? 'there'} 👋</h1>
-          <p className="text-surface-600 mt-1">Upload once and push it everywhere.</p>
-        </div>
-        <Link to="/dashboard/publish">
-          <Button leftIcon={<UploadCloud size={16} />}>New upload</Button>
-        </Link>
-      </div>
+    <div className="space-y-10">
+      <PageHeader
+        eyebrow="Studio / Overview"
+        title={<>Hey {profile?.display_name ?? 'there'}</>}
+        description="Upload once and push it everywhere."
+        doodle="sparkle"
+        actions={
+          <Link to="/dashboard/publish">
+            <Button leftIcon={<UploadCloud size={16} />}>New upload</Button>
+          </Link>
+        }
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className={cardClass}>
-            <p className="text-sm text-surface-600">{s.label}</p>
-            <p className="text-3xl font-bold mt-1">{s.value}</p>
+      <div className="paper grid grid-cols-1 sm:grid-cols-3">
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            className={cn('px-5 py-5 sm:px-6 sm:py-6', i > 0 && 'border-t sm:border-t-0 sm:border-l border-ink/20')}
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink/60">
+              {String(i + 1).padStart(2, '0')} · {s.label}
+            </p>
+            <p className="mt-2 font-sans font-black text-5xl sm:text-6xl leading-none tracking-[-0.05em] tabular-nums">
+              {s.value}
+            </p>
           </div>
         ))}
       </div>
 
       {connections.length === 0 && (
-        <div className={cn(cardClass, 'flex flex-col sm:flex-row sm:items-center justify-between gap-4')}>
+        <div className={cn(cardClass, 'border-signal/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4')}>
           <div>
-            <h4>Connect your first platform</h4>
-            <p className="text-sm text-surface-600">Link YouTube, TikTok, Instagram, Facebook or SoundCloud to start publishing.</p>
+            <p className="eyebrow text-signal mb-2">First step</p>
+            <h3>Connect your first platform</h3>
+            <p className="text-sm text-white/60 mt-2">
+              Link YouTube, TikTok, Instagram, Facebook or SoundCloud to start publishing.
+            </p>
           </div>
-          <Link to="/dashboard/connections">
+          <Link to="/dashboard/connections" className="shrink-0">
             <Button variant="outline" rightIcon={<ArrowRight size={16} />}>Connect</Button>
           </Link>
         </div>
       )}
 
-      <div className={cardClass}>
-        <h4 className="mb-4">Recent activity</h4>
+      <section className={cardClass}>
+        <PanelTitle
+          aside={
+            jobs.length > 0 && (
+              <Link to="/dashboard/library" className="eyebrow text-white/50 hover:text-signal shrink-0">
+                Library →
+              </Link>
+            )
+          }
+        >
+          Recent activity
+        </PanelTitle>
         {jobs.length === 0 ? (
-          <p className="text-sm text-surface-600">Nothing published yet.</p>
+          <p className="text-sm text-white/50">Nothing published yet. Your posts will show up here.</p>
         ) : (
-          <ul className="divide-y divide-surface-300/40">
+          <ul className="divide-y divide-white/10 border-t border-white/10">
             {jobs.slice(0, 10).map((job) => (
-              <li key={job.id} className="py-3 flex items-center justify-between gap-4 text-sm">
+              <li key={job.id} className="py-3.5 flex items-center justify-between gap-4 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{job.title}</p>
-                  <p className="text-surface-600">
+                  <p className="font-mono text-[11px] text-white/45 mt-0.5 truncate">
                     {targetName(job.target)} · {new Date(job.created_at).toLocaleString()}
                   </p>
-                  {job.error && <p className="text-xs text-error-400 truncate">{job.error}</p>}
+                  {job.error && <p className="text-xs text-error-400 truncate mt-0.5">{job.error}</p>}
                 </div>
-                {job.external_url ? (
-                  <a href={job.external_url} target="_blank" rel="noopener noreferrer" className={statusStyles[job.status]}>
-                    {job.status} ↗
-                  </a>
-                ) : (
-                  <span className={statusStyles[job.status]}>{job.status}</span>
-                )}
+                <StatusTag status={job.status} href={job.external_url} />
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 };

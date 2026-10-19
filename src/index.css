@@ -262,6 +262,11 @@ html.lenis body {
     @apply inline-flex items-center bg-signal text-ink font-mono text-[10px] uppercase tracking-[0.1em] px-2 py-1;
   }
 
+  /* Thin caution-tape stripe (studio sidebar, auth card). */
+  .hazard {
+    background-image: repeating-linear-gradient(-45deg, #f2e600 0 10px, #0b0b0c 10px 20px);
+  }
+
   /* Round outlined icon button. */
   .circle-btn {
     @apply inline-grid place-items-center h-11 w-11 rounded-full border border-signal text-signal

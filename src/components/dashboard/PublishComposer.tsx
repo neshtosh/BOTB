@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn';
 import { distributionOnly, modesFor, targetsFor } from '../../config/platforms';
 import { needsClip, PublishPlan, TargetProgress, toggleTarget } from '../../lib/publishPlan';
 import ClipEditor from './ClipEditor';
-import { inputClass, labelClass } from './styles';
+import { checkboxClass, inputClass, labelClass, segmentClass, segmentGroupClass } from './styles';
 import type { MediaType, PlatformConnection, Target } from '../../types/platform';
 
 interface PublishComposerProps {
@@ -27,21 +27,21 @@ const ProgressIcon: React.FC<{ state?: TargetProgress }> = ({ state }) => {
   switch (state.status) {
     case 'rendering':
       return (
-        <span className="flex items-center gap-1 text-xs text-accent-300">
+        <span className="flex items-center gap-1 font-mono text-[11px] text-signal">
           <Scissors size={14} /> {Math.round(state.fraction * 100)}%
         </span>
       );
     case 'processing':
-      return <Loader2 size={18} className="animate-spin text-primary-400" />;
+      return <Loader2 size={18} className="animate-spin text-signal" />;
     case 'failed':
       return <XCircle size={18} className="text-error-400" />;
     case 'published':
       return state.url ? (
-        <a href={state.url} target="_blank" rel="noopener noreferrer" className="text-success-400" aria-label="View post">
+        <a href={state.url} target="_blank" rel="noopener noreferrer" className="text-signal hover:text-white" aria-label="View post">
           <ExternalLink size={18} />
         </a>
       ) : (
-        <CheckCircle2 size={18} className="text-success-400" />
+        <CheckCircle2 size={18} className="text-signal" />
       );
   }
 };
@@ -79,35 +79,35 @@ const PublishComposer: React.FC<PublishComposerProps> = ({
             <div
               key={target.id}
               className={cn(
-                'rounded-xl border transition-colors',
-                selected ? 'border-primary-500 bg-primary-500/5' : 'border-surface-300',
-                !connected && 'opacity-70'
+                'border transition-colors',
+                selected ? 'border-signal bg-signal/[0.04]' : 'border-white/15 hover:border-white/30',
+                !connected && 'border-dashed'
               )}
             >
               <label className={cn('flex items-start gap-3 px-4 py-3', connected && !disabled && 'cursor-pointer')}>
                 <input
                   type="checkbox"
-                  className="mt-1 accent-primary-500"
+                  className={cn(checkboxClass, 'mt-0.5')}
                   checked={selected}
                   disabled={!connected || disabled}
                   onChange={() => onChange(toggleTarget(plan, target.id, mediaType, defaultCaption))}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{target.name}</span>
+                    <span className={cn('font-medium', !connected && 'text-white/50')}>{target.name}</span>
                     {mediaType === 'audio' && target.social && (
-                      <span className="text-2xs bg-accent-500/20 text-accent-300 rounded-full px-2 py-0.5">Clip only</span>
+                      <span className="tag border border-signal/50">Clip only</span>
                     )}
                     {alreadyPublished.includes(target.id) && (
-                      <span className="text-2xs bg-success-500/20 text-success-300 rounded-full px-2 py-0.5">Published</span>
+                      <span className="tag-yellow">Published</span>
                     )}
                     {!connected && (
-                      <Link to="/dashboard/connections" className="text-xs text-primary-400 hover:text-primary-300">
+                      <Link to="/dashboard/connections" className="eyebrow text-signal hover:text-white underline underline-offset-4">
                         Connect account
                       </Link>
                     )}
                   </div>
-                  {target.note && <p className="text-xs text-surface-600 mt-0.5">{target.note}</p>}
+                  {target.note && <p className="text-xs text-white/45 mt-1">{target.note}</p>}
                   {state?.status === 'failed' && <p className="text-xs text-error-400 mt-1 break-words">{state.error}</p>}
                 </div>
                 <span className="shrink-0 mt-0.5">
@@ -116,19 +116,17 @@ const PublishComposer: React.FC<PublishComposerProps> = ({
               </label>
 
               {selected && settings && (
-                <div className="px-4 pb-4 space-y-3">
+                <div className="mx-4 pb-4 pt-4 space-y-4 border-t border-signal/20">
                   {modes.length > 1 && (
-                    <div className="flex rounded-full bg-surface-200 p-0.5 w-fit">
+                    <div className={segmentGroupClass} role="group" aria-label={`${target.name} format`}>
                       {modes.map((mode) => (
                         <button
                           key={mode}
                           type="button"
                           disabled={disabled}
+                          aria-pressed={settings.mode === mode}
                           onClick={() => setTargetPlan(target.id, { mode })}
-                          className={cn(
-                            'text-xs rounded-full px-3 py-1',
-                            settings.mode === mode ? 'bg-signal text-ink font-semibold' : 'text-surface-700'
-                          )}
+                          className={segmentClass(settings.mode === mode)}
                         >
                           {mode === 'full' ? 'Full video' : 'Clip'}
                         </button>
@@ -140,7 +138,7 @@ const PublishComposer: React.FC<PublishComposerProps> = ({
                       <label className={labelClass} htmlFor={`caption-${target.id}`}>
                         {target.id === 'youtube' || target.id === 'soundcloud' ? 'Description' : 'Caption'}
                       </label>
-                      <span className={cn('text-xs', settings.caption.length > target.captionLimit ? 'text-error-400' : 'text-surface-600')}>
+                      <span className={cn('text-xs', settings.caption.length > target.captionLimit ? 'text-error-400' : 'text-white/40')}>
                         {settings.caption.length}/{target.captionLimit}
                       </span>
                     </div>
@@ -162,12 +160,12 @@ const PublishComposer: React.FC<PublishComposerProps> = ({
       </div>
 
       {needsClip(plan) && (
-        <div className="rounded-xl border border-accent-500/40 bg-accent-500/5 p-4 space-y-3">
+        <div className="border border-signal/60 p-4 sm:p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <Scissors size={16} className="text-accent-300" />
-            <h5 className="text-base">Clip for social</h5>
+            <span className="grid place-items-center h-7 w-7 bg-signal text-ink"><Scissors size={14} /></span>
+            <h3 className="text-2xl">Clip for social</h3>
           </div>
-          <p className="text-xs text-surface-600">
+          <p className="text-xs text-white/50">
             One vertical clip is made and shared by every platform set to “Clip”.
           </p>
           {source ? (
@@ -179,16 +177,16 @@ const PublishComposer: React.FC<PublishComposerProps> = ({
               disabled={disabled}
             />
           ) : (
-            <p className="text-sm text-surface-600">{sourceError || 'Loading the original file…'}</p>
+            <p className="text-sm text-white/50">{sourceError || 'Loading the original file…'}</p>
           )}
         </div>
       )}
 
       {mediaType === 'audio' && (
-        <div className="rounded-xl border border-dashed border-surface-400 px-4 py-3 text-xs text-surface-600">
+        <div className="border border-dashed border-white/15 px-4 py-3 text-xs text-white/45 space-y-1">
           {distributionOnly.map((d) => (
             <p key={d.name}>
-              <span className="text-surface-800 font-medium">{d.name}:</span> {d.reason} Distributor integration is
+              <span className="text-white/75 font-medium">{d.name}:</span> {d.reason} Distributor integration is
               coming soon.
             </p>
           ))}

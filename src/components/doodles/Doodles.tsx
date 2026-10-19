@@ -24,7 +24,9 @@ export const ScribbleUnderline: React.FC<{
   className?: string;
   color?: string;
   strokeWidth?: number;
-}> = ({ variant = 'wave', className, color = '#f2e600', strokeWidth = 3 }) => {
+  // false draws the stroke in full straight away (e.g. page headers that never scroll).
+  animate?: boolean;
+}> = ({ variant = 'wave', className, color = '#f2e600', strokeWidth = 3, animate = true }) => {
   const ref = useRef<SVGSVGElement>(null);
   const reduce = useReducedMotion();
   // 0 → 1 as the underline travels from the bottom of the screen to just below the middle.
@@ -35,7 +37,7 @@ export const ScribbleUnderline: React.FC<{
   const first = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
   // A second stroke (double underline) trails the first a little.
   const second = useTransform(first, [0.25, 1], [0, 1]);
-  const progress: MotionValue<number>[] | null = reduce ? null : [first, second];
+  const progress: MotionValue<number>[] | null = reduce || !animate ? null : [first, second];
   return (
     <svg
       ref={ref}
@@ -125,9 +127,11 @@ export const ScrollDoodle: React.FC<{
   drift?: number;
   // Degrees of rotation over that same pass.
   spin?: number;
-}> = ({ shape, className, color = '#f2e600', strokeWidth = 2.5, drift = 80, spin = 20 }) => {
+  // false renders the doodle fully drawn and still (for pages that barely scroll).
+  animate?: boolean;
+}> = ({ shape, className, color = '#f2e600', strokeWidth = 2.5, drift = 80, spin = 20, animate = true }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotion() || !animate;
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const y = useTransform(scrollYProgress, [0, 1], [drift, -drift]);
   const rotate = useTransform(scrollYProgress, [0, 1], [-spin, spin]);

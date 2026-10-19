@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { cardClass } from '../../components/dashboard/styles';
+import { Notice, PageHeader } from '../../components/dashboard/Studio';
 import { distributionOnly, providers } from '../../config/platforms';
 import { useConnections } from '../../hooks/useCreatorData';
 import { apiFetch, supabase } from '../../lib/supabase';
+import { cn } from '../../utils/cn';
 import type { Provider } from '../../types/platform';
 
 const Connections: React.FC = () => {
@@ -36,40 +38,65 @@ const Connections: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl">Connections</h1>
-        <p className="text-surface-600 mt-1">Link the accounts you want to publish to. We never see your passwords.</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow={`Studio / Connections · ${connections.length} of ${providers.length} linked`}
+        title="Connections"
+        description="Link the accounts you want to publish to. We never see your passwords."
+        underline="zigzag"
+        doodle="bolt"
+      />
 
       {(justConnected || callbackError) && (
-        <div className={callbackError ? 'text-sm text-error-400' : 'text-sm text-success-400'}>
-          {callbackError ?? `Connected ${providers.find((p) => p.id === justConnected)?.name ?? justConnected}.`}{' '}
-          <button className="underline text-surface-600" onClick={() => setParams({})}>Dismiss</button>
-        </div>
+        <Notice tone={callbackError ? 'error' : 'ok'} className="flex flex-wrap items-center gap-x-3">
+          <span>
+            {callbackError ?? `Connected ${providers.find((p) => p.id === justConnected)?.name ?? justConnected}.`}
+          </span>
+          <button className="eyebrow text-white/50 hover:text-signal" onClick={() => setParams({})}>
+            Dismiss
+          </button>
+        </Notice>
       )}
-      {error && <p className="text-sm text-error-400">{error}</p>}
+      {error && <Notice tone="error">{error}</Notice>}
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {providers.map((provider) => {
+        {providers.map((provider, i) => {
           const connection = connections.find((c) => c.provider === provider.id);
           const ig = connection?.metadata?.instagramUsername as string | null | undefined;
           return (
-            <div key={provider.id} className={`${cardClass} flex flex-col gap-4`}>
+            <div
+              key={provider.id}
+              className={cn(cardClass, 'flex flex-col gap-5', connection && 'border-signal/60')}
+            >
+              {connection && <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-signal" />}
               <div>
-                <div className="flex items-center gap-2">
-                  <h4>{provider.name}</h4>
-                  {connection && <CheckCircle2 size={18} className="text-success-400" />}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] tracking-[0.1em] text-white/35 mb-2">
+                      {String(i + 1).padStart(2, '0')}
+                    </p>
+                    <h3 className="break-words">{provider.name}</h3>
+                  </div>
+                  {connection ? (
+                    <span className="tag-yellow gap-1 shrink-0">
+                      <Check size={12} strokeWidth={3} /> Connected
+                    </span>
+                  ) : (
+                    <span className="tag shrink-0 !bg-transparent border border-white/20 !text-white/50">Not linked</span>
+                  )}
                 </div>
-                <p className="text-sm text-surface-600 mt-1">{provider.description}</p>
+                <p className="text-sm text-white/55 mt-3">{provider.description}</p>
                 {connection && (
-                  <p className="text-sm mt-2">
-                    Connected as <span className="font-medium">{connection.account_name}</span>
-                    {provider.id === 'meta' && (ig ? ` · Instagram @${ig}` : ' · no Instagram linked')}
+                  <p className="text-sm mt-3 border-t border-white/10 pt-3">
+                    <span className="eyebrow text-white/40 mr-2">As</span>
+                    <span className="font-medium">{connection.account_name}</span>
+                    {provider.id === 'meta' && (
+                      <span className="text-white/55">{ig ? ` · Instagram @${ig}` : ' · no Instagram linked'}</span>
+                    )}
                   </p>
                 )}
               </div>
-              <div className="mt-auto flex gap-2">
+              <div className="mt-auto flex flex-wrap gap-2">
                 {connection ? (
                   <>
                     <Button size="sm" variant="outline" onClick={() => connect(provider.id)} isLoading={pending === provider.id}>
@@ -81,7 +108,7 @@ const Connections: React.FC = () => {
                   </>
                 ) : (
                   <Button size="sm" onClick={() => connect(provider.id)} isLoading={pending === provider.id}>
-                    Connect
+                    Connect {provider.name}
                   </Button>
                 )}
               </div>
@@ -90,12 +117,12 @@ const Connections: React.FC = () => {
         })}
 
         {distributionOnly.map((d) => (
-          <div key={d.name} className={`${cardClass} opacity-70`}>
-            <div className="flex items-center gap-2">
-              <h4>{d.name}</h4>
-              <span className="text-2xs bg-surface-300 rounded-full px-2 py-0.5">Coming soon</span>
+          <div key={d.name} className="relative border border-dashed border-white/15 p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-white/60">{d.name}</h3>
+              <span className="tag shrink-0 !bg-white/10 !text-white/60">Coming soon</span>
             </div>
-            <p className="text-sm text-surface-600 mt-1">{d.reason} We're adding distributor support.</p>
+            <p className="text-sm text-white/45 mt-3">{d.reason} We're adding distributor support.</p>
           </div>
         ))}
       </div>

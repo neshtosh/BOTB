@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, ExternalLink, RefreshCw } from 'lucide-react';
 import Button from '../../components/common/Button';
-import { cardClass } from '../../components/dashboard/styles';
+import { cardClass, segmentClass, segmentGroupClass } from '../../components/dashboard/styles';
+import { Notice, PageHeader, PanelTitle } from '../../components/dashboard/Studio';
+import { cn } from '../../utils/cn';
 import { targetName, targets } from '../../config/platforms';
 import { apiFetch, supabase } from '../../lib/supabase';
 import { formatDate } from '../../utils/formatters';
@@ -87,120 +89,148 @@ const Analytics: React.FC = () => {
   const sorted = [...visible].sort((a, b) => (metricsOf(b)?.views ?? -1) - (metricsOf(a)?.views ?? -1));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl">Analytics</h1>
-          <p className="text-surface-600 mt-1">
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Studio / Analytics"
+        title="Analytics"
+        underline="slash"
+        doodle="waveform"
+        description={
+          <>
             How your posts are doing on every platform.
-            {lastFetched && ` Updated ${new Date(lastFetched).toLocaleString()}.`}
-          </p>
-        </div>
-        <Button onClick={refresh} isLoading={refreshing} leftIcon={<RefreshCw size={16} />} disabled={rows.length === 0}>
-          Refresh stats
-        </Button>
-      </div>
+            {lastFetched && (
+              <span className="block mt-1 font-mono text-[11px] text-white/40">
+                Updated {new Date(lastFetched).toLocaleString()}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <Button onClick={refresh} isLoading={refreshing} leftIcon={<RefreshCw size={16} />} disabled={rows.length === 0}>
+            Refresh stats
+          </Button>
+        }
+      />
 
       {Object.keys(errors).length > 0 && (
-        <div className="text-sm text-warning-300 space-y-1">
+        <Notice tone="warn" className="space-y-1">
           {Object.entries(errors).map(([target, message]) => (
             <p key={target}>
               <span className="font-medium">{target === 'all' ? 'Error' : targetName(target as Target)}:</span> {message}
             </p>
           ))}
-        </div>
+        </Notice>
       )}
 
       {!loading && rows.length === 0 ? (
-        <div className={`${cardClass} flex flex-col items-center text-center py-12`}>
-          <BarChart3 size={40} className="text-surface-500 mb-3" />
-          <h4>No published posts yet</h4>
-          <p className="text-sm text-surface-600 mt-1">Publish something and its stats will show up here.</p>
+        <div className="border border-dashed border-white/20 flex flex-col items-center text-center py-12 px-6">
+          <BarChart3 size={36} className="text-signal mb-4" />
+          <h3>No published posts yet</h3>
+          <p className="text-sm text-white/55 mt-2">Publish something and its stats will show up here.</p>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            {(['all', ...byPlatform.map((p) => p.id)] as (Target | 'all')[]).map((id) => (
-              <Button key={id} size="sm" variant={filter === id ? 'primary' : 'ghost'} onClick={() => setFilter(id)}>
-                {id === 'all' ? 'All platforms' : targetName(id)}
-              </Button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="eyebrow text-white/40">Filter</span>
+            <div className={segmentGroupClass} role="group" aria-label="Filter by platform">
+              {(['all', ...byPlatform.map((p) => p.id)] as (Target | 'all')[]).map((id) => (
+                <button key={id} type="button" aria-pressed={filter === id} className={segmentClass(filter === id)}
+                  onClick={() => setFilter(id)}>
+                  {id === 'all' ? 'All platforms' : targetName(id)}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {METRICS.map((m) => (
-              <div key={m.key} className={cardClass}>
-                <p className="text-sm text-surface-600">{m.label}</p>
-                <p className="text-3xl font-bold mt-1 tabular-nums">{show(totals[m.key])}</p>
+          <div className="paper grid grid-cols-2 lg:grid-cols-4">
+            {METRICS.map((m, i) => (
+              <div
+                key={m.key}
+                className={cn(
+                  'px-5 py-5 sm:px-6',
+                  i % 2 === 1 && 'border-l border-ink/20',
+                  i >= 2 && 'border-t lg:border-t-0 border-ink/20',
+                  i === 2 && 'lg:border-l'
+                )}
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink/60">{m.label}</p>
+                <p className="mt-2 font-sans font-black text-4xl sm:text-5xl leading-none tracking-[-0.05em] tabular-nums">
+                  {show(totals[m.key])}
+                </p>
               </div>
             ))}
           </div>
 
           {filter === 'all' && byPlatform.length > 0 && (
-            <div className={cardClass}>
-              <h4 className="mb-4">Views by platform</h4>
-              <div className="space-y-3" role="list">
+            <section className={cardClass}>
+              <PanelTitle index="01">Views by platform</PanelTitle>
+              <div className="space-y-4" role="list">
                 {byPlatform.map((p) => (
-                  <div key={p.id} role="listitem" className="grid grid-cols-[7rem_1fr_3.5rem] items-center gap-3 group"
+                  <div key={p.id} role="listitem" className="grid grid-cols-[6.5rem_minmax(0,1fr)_3.5rem] sm:grid-cols-[8rem_minmax(0,1fr)_4rem] items-center gap-3 group"
                     title={`${p.name}: ${p.views.toLocaleString()} views across ${p.posts} post${p.posts === 1 ? '' : 's'}`}>
-                    <span className="text-sm text-surface-800 truncate">{p.name}</span>
-                    <div className="h-3 rounded-full bg-surface-200">
-                      <div className="h-full rounded-full bg-primary-500 group-hover:bg-primary-400 transition-colors"
+                    <span className="text-sm text-white/75 truncate">{p.name}</span>
+                    <div className="h-4 bg-white/[0.06] border border-white/10">
+                      <div className="h-full bg-signal group-hover:bg-white transition-colors"
                         style={{ width: `${Math.max(p.pct, p.views ? 2 : 0)}%` }} />
                     </div>
-                    <span className="text-sm text-surface-800 text-right tabular-nums">{show(p.views)}</span>
+                    <span className="font-mono text-sm text-white/80 text-right tabular-nums">{show(p.views)}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className={`${cardClass} overflow-x-auto`}>
-            <h4 className="mb-4">Posts</h4>
-            <table className="w-full text-sm min-w-[640px]">
-              <thead>
-                <tr className="text-left text-surface-600 border-b border-surface-300/40">
-                  <th className="font-medium py-2 pr-4">Post</th>
-                  <th className="font-medium py-2 pr-4">Platform</th>
-                  {METRICS.map((m) => (
-                    <th key={m.key} className="font-medium py-2 px-2 text-right">{m.label.split(' ')[0]}</th>
-                  ))}
-                  <th className="py-2 pl-2" aria-label="Link" />
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((row) => {
-                  const m = metricsOf(row);
-                  return (
-                    <tr key={row.id} className="border-b border-surface-300/20 last:border-0">
-                      <td className="py-2.5 pr-4">
-                        <p className="font-medium truncate max-w-[16rem]">{row.content_items?.title ?? 'Untitled'}</p>
-                        <p className="text-xs text-surface-600">{formatDate(row.created_at)}</p>
-                      </td>
-                      <td className="py-2.5 pr-4 whitespace-nowrap">
-                        {targetName(row.target)}
-                        {row.content_items?.parent_id && <span className="text-xs text-surface-600"> · clip</span>}
-                      </td>
-                      {METRICS.map((metric) => (
-                        <td key={metric.key} className="py-2.5 px-2 text-right tabular-nums">{show(m?.[metric.key])}</td>
-                      ))}
-                      <td className="py-2.5 pl-2 text-right">
-                        {row.external_url && (
-                          <a href={row.external_url} target="_blank" rel="noopener noreferrer" aria-label="Open post"
-                            className="text-surface-600 hover:text-white inline-flex">
-                            <ExternalLink size={16} />
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <p className="text-xs text-surface-600 mt-3">
+          <section className={cardClass}>
+            <PanelTitle index={filter === 'all' && byPlatform.length > 0 ? '02' : '01'}
+              aside={<span className="eyebrow text-white/40 shrink-0">{sorted.length} post{sorted.length === 1 ? '' : 's'}</span>}>
+              Posts
+            </PanelTitle>
+            <div className="overflow-x-auto -mx-5 sm:-mx-6 px-5 sm:px-6">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead>
+                  <tr className="text-left font-mono text-[10px] uppercase tracking-[0.1em] text-white/45 border-b border-white/15">
+                    <th className="font-normal py-2.5 pr-4">Post</th>
+                    <th className="font-normal py-2.5 pr-4">Platform</th>
+                    {METRICS.map((m) => (
+                      <th key={m.key} className="font-normal py-2.5 px-2 text-right">{m.label.split(' ')[0]}</th>
+                    ))}
+                    <th className="py-2.5 pl-2" aria-label="Link" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((row) => {
+                    const m = metricsOf(row);
+                    return (
+                      <tr key={row.id} className="border-b border-white/10 last:border-0 hover:bg-white/[0.03] transition-colors">
+                        <td className="py-3 pr-4">
+                          <p className="font-medium truncate max-w-[16rem]">{row.content_items?.title ?? 'Untitled'}</p>
+                          <p className="font-mono text-[11px] text-white/40 mt-0.5">{formatDate(row.created_at)}</p>
+                        </td>
+                        <td className="py-3 pr-4 whitespace-nowrap">
+                          {targetName(row.target)}
+                          {row.content_items?.parent_id && <span className="tag !py-0.5 ml-2 border border-white/15 !text-white/60">clip</span>}
+                        </td>
+                        {METRICS.map((metric) => (
+                          <td key={metric.key} className="py-3 px-2 text-right font-mono tabular-nums">{show(m?.[metric.key])}</td>
+                        ))}
+                        <td className="py-3 pl-2 text-right">
+                          {row.external_url && (
+                            <a href={row.external_url} target="_blank" rel="noopener noreferrer" aria-label="Open post"
+                              className="text-white/50 hover:text-signal inline-flex">
+                              <ExternalLink size={16} />
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-white/40 mt-4">
               “–” means the platform hasn't reported that number (or the stat needs extra permissions; reconnect the account).
             </p>
-          </div>
+          </section>
         </>
       )}
     </div>
