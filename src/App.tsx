@@ -5,6 +5,9 @@ import Home from './pages/Home';
 import CreatorPage from './pages/CreatorPage';
 import AuthPage from './pages/auth/AuthPage';
 import { AuthProvider } from './context/AuthContext';
+import DemoBadge from './components/common/DemoBadge';
+import DemoConnect from './pages/demo/DemoConnect';
+import DemoPost from './pages/demo/DemoPost';
 
 // The creator studio is only loaded by signed-in creators, not by every visitor.
 const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'));
@@ -27,6 +30,9 @@ function App() {
               <Route path="c/:handle" element={<CreatorPage />} />
               <Route path="login" element={<AuthPage mode="login" />} />
               <Route path="signup" element={<AuthPage mode="signup" />} />
+              {/* Demo mode only: stand-ins for platform sign-in and published posts */}
+              <Route path="demo/connect/:provider" element={<DemoConnect />} />
+              <Route path="demo/post/:jobId" element={<DemoPost />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
             {/* Signed in: the creator's own content */}
@@ -40,6 +46,7 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
+        <DemoBadge />
       </BrowserRouter>
     </AuthProvider>
   );
