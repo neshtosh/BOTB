@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
@@ -7,6 +7,7 @@ import { siteConfig } from '../../config/site';
 import { useClock } from '../../hooks/useClock';
 import { scrollToId } from '../../hooks/useSmoothScroll';
 import { useAuth } from '../../context/AuthContext';
+import { whenIdle } from '../../utils/idle';
 
 // three.js is heavy; load the 3D performer separately so the page paints first.
 const HeroScene = lazy(() => import('./HeroScene'));
@@ -20,6 +21,11 @@ const Hero: React.FC = () => {
   const reduceMotion = useReducedMotion();
   const time = useClock(siteConfig.timeZone);
   const { user } = useAuth();
+
+  // Only start fetching and building the 3D scene once the copy has painted and
+  // the browser is idle; parsing three.js would otherwise hold up the first paint.
+  const [showScene, setShowScene] = useState(false);
+  useEffect(() => whenIdle(() => setShowScene(true), 1500), []);
 
   // Scroll: the copy lifts and fades while the 3D camera moves into the tunnel.
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
@@ -48,16 +54,18 @@ const Hero: React.FC = () => {
       className="relative h-[100svh] min-h-[620px] overflow-hidden bg-ink text-white"
     >
       {/* 3D graffiti tunnel + performer: reacts to scroll, the cursor and the beat */}
-      <motion.div
-        className="absolute inset-0 pointer-events-none"
-        initial={{ opacity: 0, scale: 1.06 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1.8, delay: 0.2, ease: EASE }}
-      >
-        <Suspense fallback={null}>
-          <HeroScene progress={scrollYProgress} reduceMotion={Boolean(reduceMotion)} />
-        </Suspense>
-      </motion.div>
+      {showScene && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.8, delay: 0.2, ease: EASE }}
+        >
+          <Suspense fallback={null}>
+            <HeroScene progress={scrollYProgress} reduceMotion={Boolean(reduceMotion)} />
+          </Suspense>
+        </motion.div>
+      )}
 
       {/* Torch-like glow that follows the cursor across the graffiti */}
       <motion.div className="absolute inset-0 mix-blend-screen pointer-events-none" style={{ background: spotlight }} />

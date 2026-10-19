@@ -17,11 +17,15 @@ function rng(seed: number) {
   };
 }
 
-function canvas(w: number, h: number) {
+// Drawing coordinates stay in the full-size layout; `scale` only sets how many
+// pixels the canvas gets, so a smaller texture looks the same, just softer.
+function canvas(w: number, h: number, scale: number) {
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return [c, c.getContext('2d')!] as const;
+  c.width = Math.round(w * scale);
+  c.height = Math.round(h * scale);
+  const ctx = c.getContext('2d')!;
+  ctx.scale(scale, scale);
+  return [c, ctx] as const;
 }
 
 function toTexture(c: HTMLCanvasElement, repeatX = 1) {
@@ -145,18 +149,59 @@ function throwie(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   ctx.restore();
 }
 
+// Drawing brush-font text at a new size or angle makes the browser trace every
+// glyph outline from scratch, several ms a letter: the tunnel's ~80 tags took
+// seconds. So each tag word is drawn once, upright at a fixed size, and then
+// stamped as an image at whatever size and angle the tag needs.
+interface Sprite {
+  canvas: HTMLCanvasElement;
+  fontSize: number;
+  left: number;
+  ascent: number;
+  width: number;
+}
+const sprites = new Map<string, Sprite>();
+
+// Call once every surface is painted; the sprites are only needed while drawing.
+export function clearWordSprites() {
+  sprites.clear();
+}
+
+function wordSprite(text: string, color: string, size: number): Sprite {
+  const fontSize = size > 72 ? 112 : 72;
+  const key = `${text}|${color}|${fontSize}`;
+  const cached = sprites.get(key);
+  if (cached) return cached;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d')!;
+  ctx.font = `${fontSize}px Dracutaz, sans-serif`;
+  const m = ctx.measureText(text);
+  const pad = 4;
+  const left = Math.ceil(m.actualBoundingBoxLeft) + pad;
+  const ascent = Math.ceil(m.actualBoundingBoxAscent) + pad;
+  c.width = left + Math.ceil(m.actualBoundingBoxRight) + pad;
+  c.height = ascent + Math.ceil(m.actualBoundingBoxDescent) + pad;
+  ctx.font = `${fontSize}px Dracutaz, sans-serif`; // resizing the canvas resets it
+  ctx.fillStyle = color;
+  ctx.fillText(text, left, ascent);
+  const sprite = { canvas: c, fontSize, left, ascent, width: m.width };
+  sprites.set(key, sprite);
+  return sprite;
+}
+
 function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, rand: () => number) {
+  const sprite = wordSprite(text, color, size);
+  const k = size / sprite.fontSize;
+  const width = sprite.width * k;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-0.15 + rand() * 0.3);
-  ctx.font = `${size}px Dracutaz, sans-serif`;
-  ctx.fillStyle = color;
-  ctx.fillText(text, 0, 0);
+  ctx.drawImage(sprite.canvas, -sprite.left * k, -sprite.ascent * k, sprite.canvas.width * k, sprite.canvas.height * k);
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, size * 0.25);
-  ctx.quadraticCurveTo(ctx.measureText(text).width * 0.6, size * 0.45, ctx.measureText(text).width * 1.1, size * 0.1);
+  ctx.quadraticCurveTo(width * 0.6, size * 0.45, width * 1.1, size * 0.1);
   ctx.stroke();
   ctx.restore();
 }
@@ -253,10 +298,10 @@ const PALETTES: [string, string, string][] = [
 
 const TAGS = ['indie', 'RISE', 'no label', 'SELF MADE', 'own it', 'drop', 'KASI', 'unsigned', 'loud', 'free'];
 
-export function makeWallTexture(seed: number, featured: boolean) {
+export function makeWallTexture(seed: number, featured: boolean, scale = 1) {
   const W = 4096;
   const H = 640;
-  const [c, ctx] = canvas(W, H);
+  const [c, ctx] = canvas(W, H, scale);
   const rand = rng(seed);
   grime(ctx, W, H, '#2a292f', rand);
 
@@ -308,10 +353,10 @@ export function makeWallTexture(seed: number, featured: boolean) {
   return toTexture(c);
 }
 
-export function makeBrickTexture(seed: number) {
+export function makeBrickTexture(seed: number, scale = 1) {
   const W = 1024;
   const H = 512;
-  const [c, ctx] = canvas(W, H);
+  const [c, ctx] = canvas(W, H, scale);
   const rand = rng(seed);
   ctx.fillStyle = '#121114';
   ctx.fillRect(0, 0, W, H);
@@ -331,10 +376,10 @@ export function makeBrickTexture(seed: number) {
   return toTexture(c, 6);
 }
 
-export function makeFloorTexture(seed: number) {
+export function makeFloorTexture(seed: number, scale = 1) {
   const W = 2048;
   const H = 1024;
-  const [c, ctx] = canvas(W, H);
+  const [c, ctx] = canvas(W, H, scale);
   const rand = rng(seed);
   grime(ctx, W, H, '#232226', rand);
   // Chalk scribbles and words.

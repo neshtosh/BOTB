@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Outlines, RoundedBox } from '@react-three/drei';
 import type { MotionValue } from 'framer-motion';
-import { loadGraffitiFonts, makeBrickTexture, makeFloorTexture, makeWallTexture } from './graffitiTextures';
+import { nextIdle } from '../../utils/idle';
+import { clearWordSprites, loadGraffitiFonts, makeBrickTexture, makeFloorTexture, makeWallTexture } from './graffitiTextures';
 
 // A stylised, cel-shaded performer built from primitives: illustration-style
 // rather than realistic, and fully our own (no third-party model to license).
@@ -358,29 +359,61 @@ interface TunnelTextures {
   floor: THREE.Texture;
 }
 
+// Roughly how long the hero headline takes to reveal after the scene mounts.
+const TUNNEL_DELAY_MS = 2000;
+
+// Full-size textures on desktop; on a phone-width screen half the size (a
+// quarter of the pixels) looks the same and is far quicker to draw.
+function textureScale() {
+  return Math.min(1, Math.max(0.5, window.innerWidth / 1440));
+}
+
 const Tunnel: React.FC = () => {
+  const gl = useThree((s) => s.gl);
   const [textures, setTextures] = useState<TunnelTextures | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let made: THREE.Texture[] = [];
-    loadGraffitiFonts().then(() => {
-      if (cancelled) return;
-      const brick = makeBrickTexture(5);
-      brick.wrapT = THREE.RepeatWrapping;
-      brick.repeat.set(5, 10);
-      const floor = makeFloorTexture(9);
-      floor.wrapT = THREE.RepeatWrapping;
-      floor.repeat.set(1, 4);
-      const t = { left: makeWallTexture(3, true), right: makeWallTexture(17, false), brick, floor };
-      made = Object.values(t);
-      setTextures(t);
-    });
+    const made: THREE.Texture[] = [];
+    const scale = textureScale();
+    const surfaces: Record<keyof TunnelTextures, () => THREE.Texture> = {
+      left: () => makeWallTexture(3, true, scale),
+      right: () => makeWallTexture(17, false, scale),
+      brick: () => {
+        const brick = makeBrickTexture(5, scale);
+        brick.wrapT = THREE.RepeatWrapping;
+        brick.repeat.set(5, 10);
+        return brick;
+      },
+      floor: () => {
+        const floor = makeFloorTexture(9, scale);
+        floor.wrapT = THREE.RepeatWrapping;
+        floor.repeat.set(1, 4);
+        return floor;
+      },
+    };
+    // Each surface is a big canvas, and drawing it to the GPU blocks the main
+    // thread. Wait until the hero headline has finished revealing (its animation
+    // runs on the main thread too), then do one surface per idle slot and show
+    // the tunnel once they're all uploaded.
+    (async () => {
+      await Promise.all([loadGraffitiFonts(), new Promise((resolve) => window.setTimeout(resolve, TUNNEL_DELAY_MS))]);
+      const t = {} as TunnelTextures;
+      for (const key of Object.keys(surfaces) as (keyof TunnelTextures)[]) {
+        await nextIdle(500);
+        if (cancelled) return;
+        t[key] = surfaces[key]();
+        made.push(t[key]);
+        gl.initTexture(t[key]);
+      }
+      clearWordSprites();
+      if (!cancelled) setTextures(t);
+    })();
     return () => {
       cancelled = true;
       made.forEach((tex) => tex.dispose());
     };
-  }, []);
+  }, [gl]);
 
   if (!textures) return null;
 
