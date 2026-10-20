@@ -15,13 +15,7 @@
       "memory": 2048
     }
   },
-  "buildCommand": "npm run build",
+  "buildCommand": "VITE_DEMO_MODE=true npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "crons": [
-    {
-      "path": "/api/cron/scheduled",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  "framework": "vite"
 }

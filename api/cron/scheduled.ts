@@ -7,8 +7,10 @@ import { admin, HttpError } from '../_lib/supabaseAdmin.js';
 // How many due posts one run takes on; the rest wait for the next run.
 const BATCH = 10;
 
-// GET /api/cron/scheduled — run by Vercel Cron (vercel.json) every few minutes.
-// Publishes scheduled posts whose release time has passed.
+// GET /api/cron/scheduled — publishes scheduled posts whose release time has passed.
+// Meant to run every few minutes, but no cron calls it yet: Vercel's Hobby plan only
+// allows daily crons. Add one to vercel.json (or call it from an external scheduler)
+// when the app moves off demo data.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Vercel sends "Authorization: Bearer <CRON_SECRET>" to cron routes.
