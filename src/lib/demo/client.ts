@@ -3,6 +3,7 @@
 
 import { canRead, canWrite, cascadeDelete, getState, now, Row, save, table, uid } from './db';
 import { deleteFile, fileUrl, forgetUrl, getFile, putFile } from './blobStore';
+import { ensureSeedFile, isQuickSeedFile } from './seed';
 
 type DemoError = { message: string; code?: string } | null;
 interface Result<T = unknown> {
@@ -365,6 +366,13 @@ class Query implements PromiseLike<Result> {
 // Storage
 // --------------------------------------------------------------------------
 
+// Seed media is made lazily (seed.ts). A missing seed audio file or cover is made
+// now; a seed video takes seconds to record, so that's started without waiting.
+async function prepare(path: string) {
+  if (isQuickSeedFile(path)) await ensureSeedFile(path);
+  else void ensureSeedFile(path);
+}
+
 const storage = {
   from() {
     return {
@@ -381,15 +389,22 @@ const storage = {
         return { data: null, error: null };
       },
       async download(path: string) {
+        await prepare(path);
         const blob = await getFile(path);
         return blob ? { data: blob, error: null } : { data: null, error: { message: 'Object not found' } };
       },
       async createSignedUrl(path: string) {
+        await prepare(path);
         const url = await fileUrl(path);
         return url ? { data: { signedUrl: url }, error: null } : { data: null, error: { message: 'Object not found' } };
       },
       async createSignedUrls(paths: string[]) {
-        const data = await Promise.all(paths.map(async (path) => ({ path, signedUrl: (await fileUrl(path)) ?? '' })));
+        const data = await Promise.all(
+          paths.map(async (path) => {
+            await prepare(path);
+            return { path, signedUrl: (await fileUrl(path)) ?? '' };
+          })
+        );
         return { data, error: null };
       },
     };

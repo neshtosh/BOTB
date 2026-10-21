@@ -8,6 +8,7 @@ import { metricsFor } from './api';
 import { synthesizeDemo } from '../demoTrack';
 import { makeSquareCover } from '../covers';
 import { mockCreators } from '../../data/mockCreators';
+import { nextIdle } from '../../utils/idle';
 
 export const DEMO_EMAIL = 'demo@unsigned.app';
 export const DEMO_PASSWORD = 'unsigned-demo';
@@ -347,27 +348,55 @@ async function recordVisualizer(seconds: number, vertical: boolean): Promise<Blo
   return Promise.race([done, new Promise<null>((r) => setTimeout(() => r(null), (seconds + 6) * 1000))]).then((b) => (frame ? b : null));
 }
 
-let mediaPromise: Promise<void> | null = null;
+// How each seed file is made. Audio and covers take a fraction of a second; the
+// videos are recorded from a canvas in real time, several seconds each.
+const MAKERS: Record<string, () => Promise<Blob | null>> = {
+  [FILES.matatu]: async () => encodeWav(synthesizeDemo(), 22050),
+  // Same track, played back higher and faster — a different-sounding demo.
+  [FILES.paperCuts]: async () => encodeWav(synthesizeDemo(), 26000),
+  [FILES.matatuCover]: () => makeSquareCover('Midnight Matatu', 'Kasi Moto'),
+  [FILES.paperCutsCover]: () => makeSquareCover('Paper Cuts', 'Kasi Moto'),
+  [FILES.visualizer]: () => recordVisualizer(6, false),
+  [FILES.clip]: () => recordVisualizer(5, true),
+};
+const RECORDED = new Set([FILES.visualizer, FILES.clip]);
 
-// Generates any seed media that isn't in the file store yet. Runs in the background.
-export function ensureSeedMedia() {
-  mediaPromise ??= (async () => {
-    const missing = async (path: string) => !(await getFile(path).catch(() => undefined));
-    if (await missing(FILES.matatu)) await putFile(FILES.matatu, encodeWav(synthesizeDemo(), 22050));
-    // Same track, played back higher and faster — a different-sounding demo.
-    if (await missing(FILES.paperCuts)) await putFile(FILES.paperCuts, encodeWav(synthesizeDemo(), 26000));
-    if (await missing(FILES.matatuCover)) await putFile(FILES.matatuCover, await makeSquareCover('Midnight Matatu', 'Kasi Moto'));
-    if (await missing(FILES.paperCutsCover)) await putFile(FILES.paperCutsCover, await makeSquareCover('Paper Cuts', 'Kasi Moto'));
-    if (await missing(FILES.visualizer)) {
-      const video = await recordVisualizer(6, false);
-      if (video) await putFile(FILES.visualizer, video);
+// Seed files quick enough to make on the spot when a page asks for one.
+export const isQuickSeedFile = (path: string) => path in MAKERS && !RECORDED.has(path);
+
+const making = new Map<string, Promise<void>>();
+
+// Makes one seed file if it isn't in the file store yet.
+export function ensureSeedFile(path: string): Promise<void> {
+  const make = MAKERS[path];
+  if (!make) return Promise.resolve();
+  let pending = making.get(path);
+  if (!pending) {
+    pending = (async () => {
+      if (await getFile(path).catch(() => undefined)) return;
+      const blob = await make();
+      if (blob) await putFile(path, blob);
+    })().catch(() => {
+      making.delete(path);
+    });
+    making.set(path, pending);
+  }
+  return pending;
+}
+
+let started = false;
+
+// Makes the rest of the seed media in the background: a few seconds after load,
+// one file per idle moment, so it stays clear of the page's first paint and intro.
+// Pages that need an audio file or cover before then make it on the spot
+// (see storage in client.ts).
+export function ensureSeedMedia(delayMs = 5000) {
+  if (started) return;
+  started = true;
+  window.setTimeout(async () => {
+    for (const path of Object.keys(MAKERS)) {
+      await nextIdle(2000);
+      await ensureSeedFile(path);
     }
-    if (await missing(FILES.clip)) {
-      const clip = await recordVisualizer(5, true);
-      if (clip) await putFile(FILES.clip, clip);
-    }
-  })().catch(() => {
-    mediaPromise = null;
-  });
-  return mediaPromise;
+  }, delayMs);
 }
