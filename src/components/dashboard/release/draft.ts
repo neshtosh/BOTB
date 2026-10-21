@@ -4,7 +4,7 @@
 import { MEDIA_BUCKET, supabase } from '../../../lib/supabase';
 import { checkCover, makeClipFrame, makeSquareCover, type CoverCheck } from '../../../lib/covers';
 import { executePlan, type ClipSettings, type PostMode, type PublishPlan, type TargetProgress } from '../../../lib/publishPlan';
-import { kindFor, MAX_TRACKS, slugify, splitsProblem, uniqueSlug } from '../../../lib/releases';
+import { CAN_SCHEDULE, kindFor, MAX_TRACKS, slugify, splitsProblem, uniqueSlug } from '../../../lib/releases';
 import { modesFor, targets as allTargets } from '../../../config/platforms';
 import type { ContentItem, FeaturedArtist, MediaType, Split, Target } from '../../../types/platform';
 
@@ -178,7 +178,7 @@ export function defaultDestinations(draft: ReleaseDraft): ReleaseDraft['destinat
 }
 
 export const scheduledIso = (draft: ReleaseDraft) =>
-  draft.timing === 'scheduled' && draft.releaseAt ? new Date(draft.releaseAt).toISOString() : null;
+  CAN_SCHEDULE && draft.timing === 'scheduled' && draft.releaseAt ? new Date(draft.releaseAt).toISOString() : null;
 
 // Problems that stop the creator leaving a step. Empty = good to go.
 export function stepProblems(step: StepId, draft: ReleaseDraft): string[] {

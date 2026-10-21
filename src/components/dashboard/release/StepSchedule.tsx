@@ -1,6 +1,6 @@
 import React from 'react';
 import { CalendarClock, Zap } from 'lucide-react';
-import { slugify } from '../../../lib/releases';
+import { CAN_SCHEDULE, slugify } from '../../../lib/releases';
 import { cn } from '../../../utils/cn';
 import { checkboxClass, inputClass, selectClass } from '../styles';
 import { Field, StepIntro, type DraftPatch } from './fields';
@@ -16,12 +16,16 @@ const StepSchedule: React.FC<{ index: number; draft: ReleaseDraft; patch: DraftP
       title: 'Pick a release date',
       text: 'Everything goes live together. Until then your smart link collects pre-saves.',
     },
-  ];
+  ].filter((o) => CAN_SCHEDULE || o.value === 'now');
 
   return (
     <div className="space-y-6">
       <StepIntro index={index} title="Release date">
-        <p>Uploading 2–4 weeks early gives you time to share the smart link and build up pre-saves before release day.</p>
+        {CAN_SCHEDULE ? (
+          <p>Uploading 2–4 weeks early gives you time to share the smart link and build up pre-saves before release day.</p>
+        ) : (
+          <p>Releases go out as soon as you finish. Picking a future release date is coming soon.</p>
+        )}
       </StepIntro>
 
       <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="When should it go out?">
@@ -42,7 +46,7 @@ const StepSchedule: React.FC<{ index: number; draft: ReleaseDraft; patch: DraftP
         })}
       </div>
 
-      {draft.timing === 'scheduled' && (
+      {CAN_SCHEDULE && draft.timing === 'scheduled' && (
         <Field label="Release date and time" htmlFor="releaseAt" hint={`Your time zone: ${zone}. Clips are rendered now, so the posts are ready to go.`}>
           <input id="releaseAt" type="datetime-local" className={cn(inputClass, 'sm:max-w-xs [color-scheme:dark]')}
             min={toLocalInput(new Date(Date.now() + 15 * 60_000))} value={draft.releaseAt}

@@ -1,7 +1,12 @@
-import { supabase } from './supabase';
+import { isDemoMode, supabase } from './supabase';
 import type { PublishJob, Release, ReleaseHealth, ReleaseKind, Split } from '../types/platform';
 
 export const MAX_TRACKS = 30;
+
+// A scheduled release needs something to publish its posts on release day. The
+// demo does that in the browser; the live app has no scheduler yet (nothing calls
+// api/cron/scheduled), so there releases go out straight away.
+export const CAN_SCHEDULE = isDemoMode;
 
 // How stores and platforms usually label a release by track count.
 export function kindFor(trackCount: number): ReleaseKind {

@@ -37,13 +37,21 @@ Stack: React 18 + Vite + Tailwind, Supabase (auth, Postgres, storage), Vercel.
 ### 1. Supabase
 1. Create a project at supabase.com.
 2. In the SQL editor, run the migrations in order:
-   [`0001_creator_platform.sql`](supabase/migrations/0001_creator_platform.sql), then
-   [`0002_clips_and_analytics.sql`](supabase/migrations/0002_clips_and_analytics.sql).
+   [`0001_creator_platform.sql`](supabase/migrations/0001_creator_platform.sql),
+   [`0002_clips_and_analytics.sql`](supabase/migrations/0002_clips_and_analytics.sql), then
+   [`0003_releases.sql`](supabase/migrations/0003_releases.sql).
 3. Storage: the migration creates a private `media` bucket. On the free plan, Supabase caps uploads at **50 MB per file**. Raise the limit under Storage → Settings on a paid plan for real video files.
 4. Auth → URL Configuration: set the Site URL to your domain and add `https://YOUR-DOMAIN/dashboard` to the redirect URLs.
 
 ### 2. Environment variables
 Copy `.env.example` to `.env.local` and fill it in. Add the same values in Vercel.
+Until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel, the deployed site runs in demo mode.
+
+**Scheduled releases are off for now.** There's no scheduler running yet (Vercel's Hobby plan only
+allows daily crons), so on the live backend the release form only offers "As soon as possible".
+To bring scheduling back, call `GET /api/cron/scheduled` every few minutes with
+`Authorization: Bearer $CRON_SECRET` (a Vercel cron on Pro, or any outside scheduler) and
+set `CAN_SCHEDULE` in `src/lib/releases.ts` to `true`.
 
 ### 3. Platform apps
 Each platform needs a developer app. The redirect URL for each is
